@@ -62,7 +62,7 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
           throw new Error('No user ID found in session');
         }
 
-        const response = await fetch(`https://localhost:7079/api/profile/${userid}`, {
+        const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/profile/${userid}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
             };
         }
 
-        const response = await fetch(`https://localhost:7079/api/profile/${userId}`, {
+        const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/profile/${userId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -198,7 +198,7 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
         const userId = sessionStorage.getItem('userid');
         if (!userId) return;
 
-        const response = await fetch(`https://localhost:7079/api/users/${userId}`, {
+        const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/users/${userId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -225,7 +225,7 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
   const handleLogout = async () => {
     try {
       // Call logout API to clear server session
-      await fetch('http://localhost:7079/api/logout', {
+      await fetch('https://palmares20250909131957.azurewebsites.net/api/logout', {
         method: 'POST',
         credentials: 'include'
       });
@@ -252,7 +252,7 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
         throw new Error('No user ID found in session');
       }
 
-      const response = await fetch(`http://localhost:7079/api/users/${userId}`, {
+      const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/users/${userId}`, {
         method: 'DELETE',
         credentials: 'include'
       });

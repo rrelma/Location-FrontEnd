@@ -66,7 +66,7 @@ const [formErrors, setFormErrors] = useState<Record<string, string>>({});
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch('https://localhost:7079/api/client');
+        const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/client');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -152,7 +152,7 @@ const handleSave = async () => {
         : client
     ));
     
-    const response = await fetch(`https://localhost:7079/api/client/${editedClient.id}`, {
+    const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/client/${editedClient.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -217,7 +217,7 @@ const handleAddClient = async () => {
     // Optimistic update with placeholder ID
     setClients(prev => [...prev, tempClient]);
     
-    const response = await fetch('https://localhost:7079/api/client', {
+    const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/client', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -284,7 +284,7 @@ const handleDelete = async () => {
     // Optimistic update
     setClients(prev => prev.filter(client => client.id !== clientToDelete));
     
-    const response = await fetch(`https://localhost:7079/api/client/${clientToDelete}`, {
+    const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/client/${clientToDelete}`, {
       method: 'DELETE'
     });
 

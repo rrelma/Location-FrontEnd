@@ -104,7 +104,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
 
   const fetchReservations = async () => {
     try {
-      const response = await fetch('https://localhost:7079/api/Dashboard/reservations');
+      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/Dashboard/reservations');
       if (response.ok) {
         const data: Reservation[] = await response.json();
         setReservations(data);
@@ -118,7 +118,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('https://localhost:7079/api/Dashboard/stats');
+      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/Dashboard/stats');
       if (response.ok) {
         const data: Stats = await response.json();
         setStats(data);
@@ -132,7 +132,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
 
   const fetchClients = async () => {
     try {
-      const response = await fetch('https://localhost:7079/api/client/ClientsList');
+      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/client/ClientsList');
       if (response.ok) {
         const clientsData: { id: number; name: string }[] = await response.json();
         setClients(clientsData);
@@ -146,7 +146,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
 
   const fetchCars = async () => {
     try {
-      const response = await fetch('https://localhost:7079/api/car/CarsList');
+      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/car/CarsList');
       if (response.ok) {
         const carsData: { id: number; marque: string; model: string }[] = await response.json();
         setCars(carsData);
@@ -225,7 +225,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
   const handleSave = async () => {
     if (editedReservation) {
       try {
-        const response = await fetch(`https://localhost:7079/api/Dashboard/reservations/${editedReservation.id}`, {
+        const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/Dashboard/reservations/${editedReservation.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -256,7 +256,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
     try {
       const selectedCar = cars.find(car => car.id === newReservation.idCar);
       
-      const response = await fetch('https://localhost:7079/api/Dashboard/reservations', {
+      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/Dashboard/reservations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -291,7 +291,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
   const handleDelete = async () => {
     if (reservationToDelete) {
       try {
-        const response = await fetch(`https://localhost:7079/api/Dashboard/reservations/${reservationToDelete}`, {
+        const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/Dashboard/reservations/${reservationToDelete}`, {
           method: 'DELETE',
         });
 

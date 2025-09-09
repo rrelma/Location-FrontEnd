@@ -41,8 +41,8 @@ const VignettesPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const API_BASE_URL = 'https://localhost:7079/api/vignette';
-  const CARS_API_URL = 'https://localhost:7079/api/car/CarsList';
+  const API_BASE_URL = 'https://palmares20250909131957.azurewebsites.net/api/vignette';
+  const CARS_API_URL = 'https://palmares20250909131957.azurewebsites.net/api/car/CarsList';
   const [vignettes, setVignettes] = useState<Vignette[]>([]);
   const [cars, setCars] = useState<CarSelect[]>([]);
 

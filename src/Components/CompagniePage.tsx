@@ -28,7 +28,7 @@ const CompagniesPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const API_BASE_URL = 'https://localhost:7079/api/compagnie';
+  const API_BASE_URL = 'https://palmares20250909131957.azurewebsites.net/api/compagnie';
   
   const [compagnies, setCompagnies] = useState<Compagnie[]>([]);
 

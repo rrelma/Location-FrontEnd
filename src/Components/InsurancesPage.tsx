@@ -38,7 +38,7 @@ type InsuranceForm = {
 type Company = { id: number; name: string; };
 type Car = { id: number; marque: string; modele: string; };
 
-const API_BASE_URL = 'https://localhost:7079/api/insurance';
+const API_BASE_URL = 'https://palmares20250909131957.azurewebsites.net/api/insurance';
 
 // Helper functions
 const calculateStatus = (dateExpiration: string): 'active' | 'expired' => {
@@ -71,10 +71,10 @@ const fetchInsurances = (): Promise<InsuranceVM[]> =>
   );
 
 const fetchCompanies = (): Promise<Company[]> => 
-  fetchData('https://localhost:7079/api/compagnie', 'Failed to fetch companies');
+  fetchData('https://palmares20250909131957.azurewebsites.net/api/compagnie', 'Failed to fetch companies');
 
 const fetchCars = (): Promise<Car[]> => 
-  fetchData('https://localhost:7079/api/car/CarsList', 'Failed to fetch cars');
+  fetchData('https://palmares20250909131957.azurewebsites.net/api/car/CarsList', 'Failed to fetch cars');
 
 const deleteInsurance = async (id: number): Promise<void> => {
   const response = await fetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' });
