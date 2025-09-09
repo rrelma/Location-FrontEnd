@@ -58,7 +58,7 @@ const LoginPage = ({ onLogin, onForgotPassword, onSignUp, setIsAuthenticated }: 
     setIsSubmitting(true);
     try {
       // Call the login API endpoint
-      const response = await fetch('https://localhost:7079/api/login', {
+      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,11 +72,10 @@ const LoginPage = ({ onLogin, onForgotPassword, onSignUp, setIsAuthenticated }: 
 
       if (response.ok) {
         const userData = await response.json();
-        
         // Store username in sessionStorage (not user ID)
-        sessionStorage.setItem('username', userData.username);
+        sessionStorage.setItem('userid', userData.userId);
         sessionStorage.setItem('isAuthenticated', 'true');
-        console.log(userData.username);
+        console.log(userData.userId);
         
         // Update authentication state
         console.log("Login successful");

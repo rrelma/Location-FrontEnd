@@ -66,7 +66,7 @@ const CarsPage = () => {
     const fetchCars = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("https://localhost:7079/api/car");
+        const res = await fetch("https://palmares20250909131957.azurewebsites.net/api/car");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
@@ -154,7 +154,7 @@ const handleAddCar = async () => {
     setCars(prevCars => [...prevCars, tempCar]);
     setFilteredCars(prevFilteredCars => [...prevFilteredCars, tempCar]);
 
-    const response = await fetch("https://localhost:7079/api/car", {
+    const response = await fetch("https://palmares20250909131957.azurewebsites.net/api/car", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -256,7 +256,7 @@ const handleSave = async () => {
       prevFilteredCars.map(c => c.id === editedCar.id ? editedCar : c)
     );
 
-    const response = await fetch(`https://localhost:7079/api/car/${editedCar.id}`, {
+    const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/car/${editedCar.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -348,7 +348,7 @@ const handleDelete = async () => {
       prevFilteredCars.filter(c => c.id !== carToDelete)
     );
 
-    const response = await fetch(`https://localhost:7079/api/car/${carToDelete}`, {
+    const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/car/${carToDelete}`, {
       method: "DELETE"
     });
 

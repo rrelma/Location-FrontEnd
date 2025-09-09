@@ -524,9 +524,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-3">
-                          <motion.button onClick={() => viewDetails(res.id)} className="text-indigo-600 hover:text-indigo-900" title="Voir">
-                            <EyeIcon className="h-5 w-5" />
-                          </motion.button>
                           <motion.button onClick={() => openEditModal(res)} className="text-blue-600 hover:text-blue-900" title="Modifier">
                             <PencilIcon className="h-5 w-5" />
                           </motion.button>

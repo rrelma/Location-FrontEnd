@@ -16,7 +16,6 @@ type UserProfile = {
   id: number;
   username: string;
   email: string;
-  avatar: string;
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
@@ -29,7 +28,6 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
     id: 0,
     username: '',
     email: '',
-    avatar: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
@@ -38,8 +36,7 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
   const [editMode, setEditMode] = useState({
     username: false,
     email: false,
-    password: false,
-    avatar: false
+    password: false
   });
   
   const [showPassword, setShowPassword] = useState({
@@ -59,21 +56,20 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
       setIsLoading(true);
       try {
         // Get user ID from session storage
-        const username = sessionStorage.getItem('username');
-        console.log(username);
+        const userid = sessionStorage.getItem('userid');
 
-        if (!username) {
+        if (!userid) {
           throw new Error('No user ID found in session');
         }
 
-        const response = await fetch(`https://localhost:7079/api/profile/${username}`, {
+        const response = await fetch(`https://localhost:7079/api/profile/${userid}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
           credentials: 'include' // This sends the session cookie
         });
-
+        console.log(userid," ++++++++");
         if (!response.ok) {
           // If unauthorized, redirect to login
           if (response.status === 401) {
@@ -91,14 +87,10 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
           ...prev,
           id: userData.id || 0,
           username: userData.username || '',
-          email: userData.email || '',
-          avatar: userData.avatar || ''
+          email: userData.email || ''
         }));
 
-        // Store username in session storage
-        if (userData.username) {
-          sessionStorage.setItem('username', userData.username);
-        }
+       
 
       } catch (error) {
         console.error('Failed to fetch user data:', error);
@@ -116,63 +108,85 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
     setErrors({});
     
     try {
-      const userId = sessionStorage.getItem('userId');
-      if (!userId) {
-        throw new Error('No user ID found in session');
-      }
-
-      let updateData: any = {};
-      
-      if (field === 'username') {
-        updateData = { username: profile.username };
-      } else if (field === 'email') {
-        updateData = { email: profile.email };
-      } else if (field === 'password') {
-        if (profile.newPassword !== profile.confirmPassword) {
-          setErrors({ password: 'New passwords do not match' });
-          return;
+        const userId = sessionStorage.getItem('userid');
+        if (!userId) {
+            throw new Error('No user ID found in session');
         }
-        updateData = {
-          currentPassword: profile.currentPassword,
-          newPassword: profile.newPassword
-        };
-      }
 
-      const response = await fetch(`http://localhost:7079/api/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(updateData)
-      });
+        let updateData: any = { id: parseInt(userId) };
+        
+        if (field === 'username') {
+            updateData = { 
+                id: parseInt(userId),
+                username: profile.username 
+            };
+        } else if (field === 'email') {
+            updateData = { 
+                id: parseInt(userId),
+                email: profile.email 
+            };
+        } else if (field === 'password') {
+            if (profile.newPassword !== profile.confirmPassword) {
+                setErrors({ password: 'New passwords do not match' });
+                setIsLoading(false);
+                return;
+            }
+            updateData = {
+                id: parseInt(userId),
+                password: profile.newPassword // Backend expects just "Password" field
+            };
+        }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to update ${field}`);
-      }
+        const response = await fetch(`https://localhost:7079/api/profile/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(updateData)
+        });
 
-      setEditMode(prev => ({ ...prev, [field]: false }));
-      setSuccessMessage(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully!`);
-      setTimeout(() => setSuccessMessage(''), 3000);
+        console.log('Update response:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            // Try to get detailed error message
+            let errorMessage = `Failed to update ${field}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.title || errorData.message || errorMessage;
+                
+                // Handle validation errors from ModelState
+                if (errorData.errors) {
+                    const validationErrors = Object.values(errorData.errors).flat();
+                    errorMessage = validationErrors.join(', ') || errorMessage;
+                }
+            } catch (e) {
+                errorMessage = response.statusText || errorMessage;
+            }
+            throw new Error(errorMessage);
+        }
 
-      // Clear password fields after successful update
-      if (field === 'password') {
-        setProfile(prev => ({
-          ...prev,
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        }));
-      }
+        setEditMode(prev => ({ ...prev, [field]: false }));
+        setSuccessMessage(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully!`);
+        setTimeout(() => setSuccessMessage(''), 3000);
+
+        // Clear password fields after successful update
+        if (field === 'password') {
+            setProfile(prev => ({
+                ...prev,
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+            }));
+        }
 
     } catch (error: any) {
-      console.error(`Failed to update ${field}:`, error);
-      setErrors({ api: error.message || `Failed to update ${field}. Please try again.` });
+        console.error(`Failed to update ${field}:`, error);
+        setErrors({ api: error.message || `Failed to update ${field}. Please try again.` });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+};
 
   const handleCancel = (field: keyof typeof editMode) => {
     setEditMode(prev => ({ ...prev, [field]: false }));
@@ -181,7 +195,7 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
     // Refetch original data from API
     const fetchOriginalData = async () => {
       try {
-        const userId = sessionStorage.getItem('userId');
+        const userId = sessionStorage.getItem('userid');
         if (!userId) return;
 
         const response = await fetch(`https://localhost:7079/api/users/${userId}`, {
@@ -220,44 +234,10 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
     } finally {
       // Clear client-side session storage
       sessionStorage.removeItem('username');
-      sessionStorage.removeItem('userId');
+      sessionStorage.removeItem('userid');
       
       setIsAuthenticated(false);
       navigate('/login');
-    }
-  };
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const userId = sessionStorage.getItem('userId');
-      if (!userId) {
-        throw new Error('No user ID found in session');
-      }
-
-      const formData = new FormData();
-      formData.append('avatar', file);
-
-      const response = await fetch(`http://localhost:7079/api/users/${userId}/avatar`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload avatar');
-      }
-
-      const result = await response.json();
-      setProfile(prev => ({ ...prev, avatar: result.avatarUrl }));
-      setSuccessMessage('Avatar updated successfully!');
-      setTimeout(() => setSuccessMessage(''), 3000);
-
-    } catch (error) {
-      console.error('Avatar upload failed:', error);
-      setErrors({ api: 'Failed to upload avatar. Please try again.' });
     }
   };
 
@@ -267,7 +247,7 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
     }
 
     try {
-      const userId = sessionStorage.getItem('userId');
+      const userId = sessionStorage.getItem('userid');
       if (!userId) {
         throw new Error('No user ID found in session');
       }
@@ -315,28 +295,8 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
         <div className="bg-white shadow rounded-lg overflow-hidden">
           {/* Profile Header */}
           <div className="bg-indigo-700 px-6 py-8 text-center">
-            <div className="relative inline-block">
-              <div className="h-24 w-24 rounded-full bg-white flex items-center justify-center text-indigo-700 text-4xl font-bold mb-4 mx-auto overflow-hidden">
-                {profile.avatar ? (
-                  <img 
-                    src={profile.avatar} 
-                    alt="Profile" 
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <UserCircleIcon className="h-20 w-20" />
-                )}
-              </div>
-              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-white rounded-full p-1 cursor-pointer shadow-md">
-                <PencilIcon className="h-4 w-4 text-indigo-700" />
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarUpload}
-                />
-              </label>
+            <div className="h-24 w-24 rounded-full bg-white flex items-center justify-center text-indigo-700 text-4xl font-bold mb-4 mx-auto">
+              <UserCircleIcon className="h-20 w-20" />
             </div>
             <h1 className="text-2xl font-bold text-white">
               @{profile.username}
