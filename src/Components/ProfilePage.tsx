@@ -26,6 +26,15 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const apiUrl = import.meta.env.VITE_API_URL;
 
+  const [originalProfile, setOriginalProfile] = useState<UserProfile>({
+    id: 0,
+    username: '',
+    email: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  
   const [profile, setProfile] = useState<UserProfile>({
     id: 0,
     username: '',
@@ -51,7 +60,7 @@ const ProfilePage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
   
-  // Notification states (same as CompagniesPage)
+  // Notification states
   const [operationError, setOperationError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -98,13 +107,18 @@ const ProfilePage = () => {
 
         const userData = await response.json();
         
-        // Update profile with data from API
-        setProfile(prev => ({
-          ...prev,
+        // Update both original and current profile with data from API
+        const updatedProfile = {
           id: userData.id || 0,
           username: userData.username || '',
-          email: userData.email || ''
-        }));
+          email: userData.email || '',
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        };
+        
+        setOriginalProfile(updatedProfile);
+        setProfile(updatedProfile);
 
       } catch (error) {
         showError('Failed to load profile data. Please try again.');
@@ -117,112 +131,136 @@ const ProfilePage = () => {
   }, [navigate]);
 
   const handleSave = async (field: keyof typeof editMode) => {
-  setIsLoading(true);
-  setErrors({});
-  setOperationError(null);
-  
-  try {
-      const userId = sessionStorage.getItem('userid');
-      if (!userId) {
-          throw new Error('No user ID found in session');
-      }
+    setIsLoading(true);
+    setErrors({});
+    setOperationError(null);
+    
+    try {
+        const userId = sessionStorage.getItem('userid');
+        if (!userId) {
+            throw new Error('No user ID found in session');
+        }
 
-      let updateData: any = { id: parseInt(userId) };
-      
-      if (field === 'username') {
-          updateData = { 
-              id: parseInt(userId),
-              username: profile.username 
-          };
-      } else if (field === 'email') {
-          updateData = { 
-              id: parseInt(userId),
-              email: profile.email 
-          };
-      } else if (field === 'password') {
-          if (profile.newPassword !== profile.confirmPassword) {
-              showError('Les nouveaux mots de passe ne correspondent pas');
-              setIsLoading(false);
-              return;
-          }
-          updateData = {
-              id: parseInt(userId),
-              password: profile.newPassword
-          };
-      }
+        let updateData: any = { id: parseInt(userId) };
+        
+        if (field === 'username') {
+            updateData = { 
+                id: parseInt(userId),
+                username: profile.username 
+            };
+        } else if (field === 'email') {
+            updateData = { 
+                id: parseInt(userId),
+                email: profile.email 
+            };
+        } else if (field === 'password') {
+            if (profile.newPassword !== profile.confirmPassword) {
+                showError('Les nouveaux mots de passe ne correspondent pas');
+                setIsLoading(false);
+                return;
+            }
+            updateData = {
+                id: parseInt(userId),
+                password: profile.newPassword
+            };
+        }
 
-      const response = await fetch(`${apiUrl}/api/profile/${userId}`, {
-          method: 'PUT',
-          headers: {
-              'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(updateData)
-      });
-      
-      // Handle non-JSON responses gracefully
-      let errorData;
-      try {
-          errorData = await response.json();
-      } catch (jsonError) {
-          // If response is not JSON, create a simple error object
-          errorData = {
-              message: `HTTP error! status: ${response.status}`,
-              status: response.status
-          };
-      }
-      
-      if (!response.ok) {
-          let errorMessage = `Échec de la mise à jour de ${field}`;
-          
-          if (response.status === 400 && errorData.errors) {
-              const validationErrors: Record<string, string[]> = {};
-              for (const [key, value] of Object.entries(errorData.errors)) {
-                  if (Array.isArray(value)) {
-                      const cleanKey = key.includes('.') ? key.split('.').pop()! : key;
-                      validationErrors[cleanKey] = value as string[];
-                  }
-              }
-              setErrors(validationErrors);
-              
-              // Show the first validation error
-              const firstError = Object.values(validationErrors)[0]?.[0];
-              if (firstError) {
-                showError(firstError);
-              }
-              return;
-          }
-          
-          errorMessage = errorData.title || errorData.message || errorMessage;
-          throw new Error(errorMessage);
-      }
+        const response = await fetch(`${apiUrl}/api/profile/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(updateData)
+        });
+        
+        // Handle non-JSON responses gracefully
+        let errorData;
+        try {
+            errorData = await response.json();
+        } catch (jsonError) {
+            // If response is not JSON, create a simple error object
+            errorData = {
+                message: `HTTP error! status: ${response.status}`,
+                status: response.status
+            };
+        }
+        
+        if (!response.ok) {
+            let errorMessage = `Échec de la mise à jour de ${field}`;
+            
+            if (response.status === 400 && errorData.errors) {
+                const validationErrors: Record<string, string[]> = {};
+                for (const [key, value] of Object.entries(errorData.errors)) {
+                    if (Array.isArray(value)) {
+                        const cleanKey = key.includes('.') ? key.split('.').pop()! : key;
+                        validationErrors[cleanKey] = value as string[];
+                    }
+                }
+                setErrors(validationErrors);
+                
+                // Show the first validation error
+                const firstError = Object.values(validationErrors)[0]?.[0];
+                if (firstError) {
+                  showError(firstError);
+                }
+                
+                // Revert to original values on error
+                setProfile(originalProfile);
+                return;
+            }
+            
+            errorMessage = errorData.title || errorData.message || errorMessage;
+            
+            // Revert to original values on error
+            setProfile(originalProfile);
+            throw new Error(errorMessage);
+        }
 
-      setEditMode(prev => ({ ...prev, [field]: false }));
-      
-      // Show success notification
-      const fieldName = field === 'username' ? 'Nom d\'utilisateur' : 
-                       field === 'email' ? 'Email' : 'Mot de passe';
-      
-      showSuccess(`${fieldName} mis à jour avec succès!`);
+        // Update original profile with the new values on success
+        setOriginalProfile(prev => ({
+            ...prev,
+            username: field === 'username' ? profile.username : prev.username,
+            email: field === 'email' ? profile.email : prev.email
+        }));
+        
+        setEditMode(prev => ({ ...prev, [field]: false }));
+        
+        // Show success notification
+        const fieldName = field === 'username' ? 'Nom d\'utilisateur' : 
+                         field === 'email' ? 'Email' : 'Mot de passe';
+        
+        showSuccess(`${fieldName} mis à jour avec succès!`);
 
-      // Clear password fields after successful update
-      if (field === 'password') {
-          setProfile(prev => ({
-              ...prev,
-              currentPassword: '',
-              newPassword: '',
-              confirmPassword: ''
-          }));
-      }
+        // Clear password fields after successful update
+        if (field === 'password') {
+            setProfile(prev => ({
+                ...prev,
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+            }));
+            
+            setOriginalProfile(prev => ({
+                ...prev,
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+            }));
+        }
 
-  } catch (error: any) {
-      showError(error.message || `Échec de la mise à jour de ${field}. Veuillez réessayer.`);
-  } finally {
-      setIsLoading(false);
-  }
-};
+    } catch (error: any) {
+        // Revert to original values on error
+        setProfile(originalProfile);
+        showError(error.message || `Échec de la mise à jour de ${field}. Veuillez réessayer.`);
+    } finally {
+        setIsLoading(false);
+    }
+  };
 
   const handleCancel = (field: keyof typeof editMode) => {
+    // Revert to original values when canceling
+    setProfile(originalProfile);
     setEditMode(prev => ({ ...prev, [field]: false }));
     setErrors({});
     setOperationError(null);
@@ -241,7 +279,7 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 overflow-auto">
-      {/* Notification messages - same as CompagniesPage */}
+      {/* Notification messages */}
       <AnimatePresence>
         <div className="mb-6 space-y-4">
           {operationError && (
@@ -296,7 +334,7 @@ const ProfilePage = () => {
             transition={{ delay: 0.2 }}
             className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100"
           >
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+            <div className="px极速-6 py-4 border-b border-slate-100 flex justify-between items-center">
               <div className="flex items-center">
                 <button
                   onClick={() => navigate(-1)}
@@ -312,7 +350,7 @@ const ProfilePage = () => {
             <div className="p-6">
               {/* Profile Header */}
               <div className="text-center mb-8">
-                <div className="h-24 w-24 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 text-4xl font-bold mb-4 mx-auto">
+                <div className="h-24 w-24 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 text-4xl font-bold mb极速-4 mx-auto">
                   <UserCircleIcon className="h-20 w-20" />
                 </div>
                 <h1 className="text-2xl font-bold text-slate-800">
@@ -430,7 +468,7 @@ const ProfilePage = () => {
                               whileTap={{ scale: 0.95 }}
                               onClick={() => handleSave('email')}
                               disabled={isLoading}
-                              className="flex items-center px-2极 py-1 text-green-600 hover:text-green-700 transition-colors duration-200 disabled:opacity-50"
+                              className="flex items-center px-2 py-1 text-green-600 hover:text-green-700 transition-colors duration-200 disabled:opacity-50"
                             >
                               <CheckIcon className="h-4 w-4 mr-1" />
                               Sauvegarder
@@ -485,7 +523,7 @@ const ProfilePage = () => {
                     
                     {/* Password Section */}
                     <div className="border-b border-slate-200 pb-6">
-                      <div className="flex justify-between items-center mb极速-4">
+                      <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-medium text-slate-800">Changer le mot de passe</h2>
                         {!editMode.password ? (
                           <motion.button
@@ -562,7 +600,7 @@ const ProfilePage = () => {
                                 onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })}
                               >
                                 {showPassword.new ? (
-                                  <EyeSlashIcon className="h-5 w-5 text-slate-极速400" />
+                                  <EyeSlashIcon className="h-5 w-5 text-slate-400" />
                                 ) : (
                                   <EyeIcon className="h-5 w-5 text-slate-400" />
                                 )}
@@ -574,10 +612,10 @@ const ProfilePage = () => {
                             <label className="block text-sm font-medium text-slate-700 mb-1">Confirmer le nouveau mot de passe</label>
                             <div className="relative">
                               <input
-                                type={showPassword.confirm ? "text" : "password"}
+                                type={showPassword.confirm ? "text极速" : "password"}
                                 value={profile.confirmPassword}
                                 onChange={(e) => setProfile({ ...profile, confirmPassword: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 transition-all"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus极速:ring-teal-500 focus:border-teal-500 transition-all"
                               />
                               <button
                                 type="button"
@@ -613,7 +651,7 @@ const ProfilePage = () => {
         .animate-blob {
           animation: blob 7s infinite;
         }
-        .animation-delay-2000 {
+        .animation-del极速ay-2000 {
           animation-delay: 2s;
         }
         .animation-delay-4000 {
