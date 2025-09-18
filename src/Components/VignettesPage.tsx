@@ -134,6 +134,8 @@ const VignettesPage = () => {
       });
 
       if (!response.ok) {
+        let errorMessage = 'Failed to add vignette';
+
         if (response.status === 400) {
           const errorData = await response.json();
           const errors: Record<string, string[]> = {};
@@ -157,8 +159,9 @@ const VignettesPage = () => {
           
           setFormErrors(errors);
           throw new Error("Form validation failed");
+          errorMessage=errorData.message || 'Validation failed';
         }
-        throw new Error(errorData.message || 'Validation failed');
+        throw new Error(errorMessage);
       }
 
       // Get the actual ID from the backend response
