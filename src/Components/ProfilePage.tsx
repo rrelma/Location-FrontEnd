@@ -8,9 +8,10 @@ import {
   EyeSlashIcon,
   ArrowLeftIcon,
   UserCircleIcon,
-  ExclamationTriangleIcon,
-  TrashIcon
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 type UserProfile = {
   id: number;
@@ -21,7 +22,7 @@ type UserProfile = {
   confirmPassword: string;
 };
 
-const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boolean) => void }) => {
+const ProfilePage = () => {
   const navigate = useNavigate();
   
   const [profile, setProfile] = useState<UserProfile>({
@@ -45,10 +46,25 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
     confirm: false
   });
   
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
+  
+  // Notification states (same as CompagniesPage)
+  const [operationError, setOperationError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Show success message
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  // Show error message
+  const showError = (message: string) => {
+    setOperationError(message);
+    setTimeout(() => setOperationError(null), 5000);
+  };
 
   // Fetch user data from API on component mount
   useEffect(() => {
@@ -67,13 +83,12 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
           headers: {
             'Content-Type': 'application/json',
           },
-          credentials: 'include' // This sends the session cookie
+          credentials: 'include'
         });
-        console.log(userid," ++++++++");
+
         if (!response.ok) {
           // If unauthorized, redirect to login
           if (response.status === 401) {
-            setIsAuthenticated(false);
             navigate('/login');
             return;
           }
@@ -90,22 +105,21 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
           email: userData.email || ''
         }));
 
-       
-
       } catch (error) {
         console.error('Failed to fetch user data:', error);
-        setErrors({ api: 'Failed to load profile data. Please try again.' });
+        showError('Failed to load profile data. Please try again.');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchUserData();
-  }, [navigate, setIsAuthenticated]);
+  }, [navigate]);
 
   const handleSave = async (field: keyof typeof editMode) => {
     setIsLoading(true);
     setErrors({});
+    setOperationError(null);
     
     try {
         const userId = sessionStorage.getItem('userid');
@@ -127,13 +141,13 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
             };
         } else if (field === 'password') {
             if (profile.newPassword !== profile.confirmPassword) {
-                setErrors({ password: 'New passwords do not match' });
+                showError('Les nouveaux mots de passe ne correspondent pas');
                 setIsLoading(false);
                 return;
             }
             updateData = {
                 id: parseInt(userId),
-                password: profile.newPassword // Backend expects just "Password" field
+                password: profile.newPassword
             };
         }
 
@@ -145,30 +159,40 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
             credentials: 'include',
             body: JSON.stringify(updateData)
         });
-
-        console.log('Update response:', response.status, response.statusText);
         
         if (!response.ok) {
-            // Try to get detailed error message
-            let errorMessage = `Failed to update ${field}`;
-            try {
-                const errorData = await response.json();
-                errorMessage = errorData.title || errorData.message || errorMessage;
-                
-                // Handle validation errors from ModelState
-                if (errorData.errors) {
-                    const validationErrors = Object.values(errorData.errors).flat();
-                    errorMessage = validationErrors.join(', ') || errorMessage;
+            let errorMessage = `Échec de la mise à jour de ${field}`;
+            const errorData = await response.json();
+            
+            if (response.status === 400 && errorData.errors) {
+                const validationErrors: Record<string, string[]> = {};
+                for (const [key, value] of Object.entries(errorData.errors)) {
+                    if (Array.isArray(value)) {
+                        const cleanKey = key.includes('.') ? key.split('.').pop()! : key;
+                        validationErrors[cleanKey] = value as string[];
+                    }
                 }
-            } catch (e) {
-                errorMessage = response.statusText || errorMessage;
+                setErrors(validationErrors);
+                
+                // Show the first validation error
+                const firstError = Object.values(validationErrors)[0]?.[0];
+                if (firstError) {
+                  showError(firstError);
+                }
+                return;
             }
+            
+            errorMessage = errorData.title || errorData.message || errorMessage;
             throw new Error(errorMessage);
         }
 
         setEditMode(prev => ({ ...prev, [field]: false }));
-        setSuccessMessage(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully!`);
-        setTimeout(() => setSuccessMessage(''), 3000);
+        
+        // Show success notification
+        const fieldName = field === 'username' ? 'Nom d\'utilisateur' : 
+                         field === 'email' ? 'Email' : 'Mot de passe';
+        
+        showSuccess(`${fieldName} mis à jour avec succès!`);
 
         // Clear password fields after successful update
         if (field === 'password') {
@@ -182,437 +206,410 @@ const ProfilePage = ({ setIsAuthenticated }: { setIsAuthenticated: (value: boole
 
     } catch (error: any) {
         console.error(`Failed to update ${field}:`, error);
-        setErrors({ api: error.message || `Failed to update ${field}. Please try again.` });
+        showError(error.message || `Échec de la mise à jour de ${field}. Veuillez réessayer.`);
     } finally {
         setIsLoading(false);
     }
-};
+  };
 
   const handleCancel = (field: keyof typeof editMode) => {
     setEditMode(prev => ({ ...prev, [field]: false }));
     setErrors({});
-    
-    // Refetch original data from API
-    const fetchOriginalData = async () => {
-      try {
-        const userId = sessionStorage.getItem('userid');
-        if (!userId) return;
-
-        const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/users/${userId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include'
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          setProfile(prev => ({
-            ...prev,
-            username: userData.username || '',
-            email: userData.email || ''
-          }));
-        }
-      } catch (error) {
-        console.error('Failed to fetch original data:', error);
-      }
-    };
-
-    fetchOriginalData();
-  };
-
-  const handleLogout = async () => {
-    try {
-      // Call logout API to clear server session
-      await fetch('https://palmares20250909131957.azurewebsites.net/api/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-    } catch (error) {
-      console.error('Logout API error:', error);
-    } finally {
-      // Clear client-side session storage
-      sessionStorage.removeItem('username');
-      sessionStorage.removeItem('userid');
-      
-      setIsAuthenticated(false);
-      navigate('/login');
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      const userId = sessionStorage.getItem('userid');
-      if (!userId) {
-        throw new Error('No user ID found in session');
-      }
-
-      const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/users/${userId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete account');
-      }
-
-      // Clear client-side storage and redirect
-      sessionStorage.removeItem('username');
-      sessionStorage.removeItem('userId');
-      setIsAuthenticated(false);
-      navigate('/register');
-      
-    } catch (error) {
-      console.error('Account deletion failed:', error);
-      setErrors({ api: 'Failed to delete account. Please try again.' });
-    }
+    setOperationError(null);
   };
 
   if (isLoading && !profile.username) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Chargement du profil...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-6 transition-colors duration-200"
-        >
-          <ArrowLeftIcon className="h-5 w-5 mr-2" />
-          Back to Dashboard
-        </button>
-        
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          {/* Profile Header */}
-          <div className="bg-indigo-700 px-6 py-8 text-center">
-            <div className="h-24 w-24 rounded-full bg-white flex items-center justify-center text-indigo-700 text-4xl font-bold mb-4 mx-auto">
-              <UserCircleIcon className="h-20 w-20" />
-            </div>
-            <h1 className="text-2xl font-bold text-white">
-              @{profile.username}
-            </h1>
-            <p className="text-indigo-200">{profile.email}</p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 overflow-auto">
+      {/* Notification messages - same as CompagniesPage */}
+      <AnimatePresence>
+        <div className="mb-6 space-y-4">
+          {operationError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="bg-red-50 border border-red-200 rounded-lg shadow-sm p-4 flex items-start"
+            >
+              <ExclamationCircleIcon className="h-6 w-6 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-red-800">Erreur</h3>
+                <p className="mt-1 text-sm text-red-700">{operationError}</p>
+              </div>
+              <button onClick={() => setOperationError(null)} className="text-red-600 hover:text-red-800">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </motion.div>
+          )}
           
-          {/* Success Message */}
           {successMessage && (
-            <div className="bg-green-50 border-l-4 border-green-400 p-4 mx-6 mt-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <CheckIcon className="h-5 w-5 text-green-400" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-green-700">{successMessage}</p>
-                </div>
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="bg-green-50 border border-green-200 rounded-lg shadow-sm p-4 flex items-start"
+            >
+              <CheckCircleIcon className="h-6 w-6 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-green-800">Succès</h3>
+                <p className="mt-1 text-sm text-green-700">{successMessage}</p>
+              </div>
+              <button onClick={() => setSuccessMessage(null)} className="text-green-600 hover:text-green-800">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </motion.div>
+          )}
+        </div>
+      </AnimatePresence>
+
+      {/* Floating decorative elements */}
+      <div className="absolute top-10 left-10 w-72 h-72 bg-teal-100 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
+      <div className="absolute top-10 right-10 w-72 h-72 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
+      <div className="absolute bottom-10 left-20 w-72 h-72 bg-emerald-100 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
+      
+      {/* Main content */}
+      <div className="relative z-10">
+        <main className="p-4 lg:p-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100"
+          >
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+              <div className="flex items-center">
+                <button
+                  onClick={() => navigate(-1)}
+                  className="flex items-center text-slate-600 hover:text-slate-900 mr-4 transition-colors duration-200"
+                >
+                  <ArrowLeftIcon className="h-5 w-5 mr-1" />
+                  Retour
+                </button>
+                <h2 className="text-xl font-semibold text-slate-800">Profil Utilisateur</h2>
               </div>
             </div>
-          )}
-          
-          {/* Error Message */}
-          {errors.api && (
-            <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-6 mt-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+
+            <div className="p-6">
+              {/* Profile Header */}
+              <div className="text-center mb-8">
+                <div className="h-24 w-24 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 text-4xl font-bold mb-4 mx-auto">
+                  <UserCircleIcon className="h-20 w-20" />
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">{errors.api}</p>
-                </div>
+                <h1 className="text-2xl font-bold text-slate-800">
+                  @{profile.username}
+                </h1>
+                <p className="text-slate-600">{profile.email}</p>
               </div>
-            </div>
-          )}
-          
-          {/* Tab Navigation */}
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
-              <button
-                onClick={() => setActiveTab('profile')}
-                className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                  activeTab === 'profile'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Profile Information
-              </button>
-              <button
-                onClick={() => setActiveTab('security')}
-                className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                  activeTab === 'security'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Security
-              </button>
-            </nav>
-          </div>
-          
-          {/* Profile Details */}
-          <div className="px-6 py-6 space-y-6">
-            {activeTab === 'profile' ? (
-              <>
-                {/* Username Section */}
-                <div className="border-b border-gray-200 pb-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Username</h2>
-                    {!editMode.username ? (
-                      <button
-                        onClick={() => setEditMode(prev => ({ ...prev, username: true }))}
-                        className="text-indigo-600 hover:text-indigo-900 flex items-center transition-colors duration-200"
-                      >
-                        <PencilIcon className="h-4 w-4 mr-1" />
-                        Edit
-                      </button>
-                    ) : (
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleSave('username')}
-                          disabled={isLoading}
-                          className="text-green-600 hover:text-green-900 flex items-center transition-colors duration-200 disabled:opacity-50"
-                        >
-                          <CheckIcon className="h-4 w-4 mr-1" />
-                          Save
-                        </button>
-                        <button
-                          onClick={() => handleCancel('username')}
-                          className="text-red-600 hover:text-red-900 flex items-center transition-colors duration-200"
-                        >
-                          <XMarkIcon className="h-4 w-4 mr-1" />
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {editMode.username ? (
-                    <div>
-                      <input
-                        type="text"
-                        value={profile.username}
-                        onChange={(e) => setProfile({ ...profile, username: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-gray-600">@{profile.username}</p>
-                  )}
-                </div>
-                
-                {/* Email Section */}
-                <div className="border-b border-gray-200 pb-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Email Address</h2>
-                    {!editMode.email ? (
-                      <button
-                        onClick={() => setEditMode(prev => ({ ...prev, email: true }))}
-                        className="text-indigo-600 hover:text-indigo-900 flex items-center transition-colors duration-200"
-                      >
-                        <PencilIcon className="h-4 w-4 mr-1" />
-                        Edit
-                      </button>
-                    ) : (
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleSave('email')}
-                          disabled={isLoading}
-                          className="text-green-600 hover:text-green-900 flex items-center transition-colors duration-200 disabled:opacity-50"
-                        >
-                          <CheckIcon className="h-4 w-4 mr-1" />
-                          Save
-                        </button>
-                        <button
-                          onClick={() => handleCancel('email')}
-                          className="text-red-600 hover:text-red-900 flex items-center transition-colors duration-200"
-                        >
-                          <XMarkIcon className="h-4 w-4 mr-1" />
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {editMode.email ? (
-                    <div>
-                      <input
-                        type="email"
-                        value={profile.email}
-                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-gray-600">{profile.email}</p>
-                  )}
-                </div>
-              </>
-            ) : (
-              /* Security Tab */
+              
+              {/* Tab Navigation */}
+              <div className="border-b border-slate-200 mb-6">
+                <nav className="flex -mb-px">
+                  <button
+                    onClick={() => setActiveTab('profile')}
+                    className={`py-3 px-6 text-center border-b-2 font-medium text-sm ${
+                      activeTab === 'profile'
+                        ? 'border-teal-500 text-teal-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    Informations du profil
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('security')}
+                    className={`py-3 px-6 text-center border-b-2 font-medium text-sm ${
+                      activeTab === 'security'
+                        ? 'border-teal-500 text-teal-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    Sécurité
+                  </button>
+                </nav>
+              </div>
+              
+              {/* Profile Details */}
               <div className="space-y-6">
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-yellow-700">
-                        For your security, please keep your password confidential and update it regularly.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Password Section */}
-                <div className="border-b border-gray-200 pb-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Change Password</h2>
-                    {!editMode.password ? (
-                      <button
-                        onClick={() => setEditMode(prev => ({ ...prev, password: true }))}
-                        className="text-indigo-600 hover:text-indigo-900 flex items-center transition-colors duration-200"
-                      >
-                        <PencilIcon className="h-4 w-4 mr-1" />
-                        Change
-                      </button>
-                    ) : (
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleSave('password')}
-                          disabled={isLoading}
-                          className="text-green-600 hover:text-green-900 flex items-center transition-colors duration-200 disabled:opacity-50"
-                        >
-                          <CheckIcon className="h-4 w-4 mr-1" />
-                          Update
-                        </button>
-                        <button
-                          onClick={() => handleCancel('password')}
-                          className="text-red-600 hover:text-red-900 flex items-center transition-colors duration-200"
-                        >
-                          <XMarkIcon className="h-4 w-4 mr-1" />
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {editMode.password ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                        <div className="relative">
-                          <input
-                            type={showPassword.current ? "text" : "password"}
-                            value={profile.currentPassword}
-                            onChange={(e) => setProfile({ ...profile, currentPassword: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                          />
-                          <button
-                            type="button"
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                            onClick={() => setShowPassword({ ...showPassword, current: !showPassword.current })}
+                {activeTab === 'profile' ? (
+                  <>
+                    {/* Username Section */}
+                    <div className="border-b border-slate-200 pb-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-medium text-slate-800">Nom d'utilisateur</h2>
+                        {!editMode.username ? (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setEditMode(prev => ({ ...prev, username: true }))}
+                            className="flex items-center px-3 py-1 text-teal-600 hover:text-teal-700 transition-colors duration-200"
                           >
-                            {showPassword.current ? (
-                              <EyeSlashIcon className="h-5 w-5 text-gray-400" />
-                            ) : (
-                              <EyeIcon className="h-5 w-5 text-gray-400" />
-                            )}
-                          </button>
-                        </div>
+                            <PencilIcon className="h-4 w-4 mr-1" />
+                            Modifier
+                          </motion.button>
+                        ) : (
+                          <div className="flex space-x-2">
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleSave('username')}
+                              disabled={isLoading}
+                              className="flex items-center px-2 py-1 text-green-600 hover:text-green-700 transition-colors duration-200 disabled:opacity-50"
+                            >
+                              <CheckIcon className="h-4 w-4 mr-1" />
+                              Sauvegarder
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleCancel('username')}
+                              className="flex items-center px-2 py-1 text-red-600 hover:text-red-700 transition-colors duration-200"
+                            >
+                              <XMarkIcon className="h-4 w-4 mr-1" />
+                              Annuler
+                            </motion.button>
+                          </div>
+                        )}
                       </div>
                       
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                        <div className="relative">
+                      {editMode.username ? (
+                        <div>
                           <input
-                            type={showPassword.new ? "text" : "password"}
-                            value={profile.newPassword}
-                            onChange={(e) => setProfile({ ...profile, newPassword: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                            type="text"
+                            value={profile.username}
+                            onChange={(e) => setProfile({ ...profile, username: e.target.value })}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-teal-500 focus:border-teal-500 transition-all ${
+                              errors.username ? 'border-red-500' : 'border-slate-300'
+                            }`}
                           />
-                          <button
-                            type="button"
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                            onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })}
-                          >
-                            {showPassword.new ? (
-                              <EyeSlashIcon className="h-5 w-5 text-gray-400" />
-                            ) : (
-                              <EyeIcon className="h-5 w-5 text-gray-400" />
-                            )}
-                          </button>
+                          {errors.username && (
+                            <p className="mt-1 text-sm text-red-600">{errors.username[0]}</p>
+                          )}
                         </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                        <div className="relative">
-                          <input
-                            type={showPassword.confirm ? "text" : "password"}
-                            value={profile.confirmPassword}
-                            onChange={(e) => setProfile({ ...profile, confirmPassword: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                          />
-                          <button
-                            type="button"
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                            onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })}
-                          >
-                            {showPassword.confirm ? (
-                              <EyeSlashIcon className="h-5 w-5 text-gray-400" />
-                            ) : (
-                              <EyeIcon className="h-5 w-5 text-gray-400" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                      {errors.password && (
-                        <p className="text-red-500 text-sm">{errors.password}</p>
+                      ) : (
+                        <p className="text-slate-600">@{profile.username}</p>
                       )}
                     </div>
-                  ) : (
-                    <p className="text-gray-600">Last changed: 3 months ago</p>
-                  )}
-                </div>
-                
-                {/* Account Deletion Section */}
-                <div className="border-b border-gray-200 pb-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">Delete Account</h2>
-                  <p className="text-gray-600 mb-4">
-                    Once you delete your account, there is no going back. Please be certain.
-                  </p>
-                  <button
-                    onClick={handleDeleteAccount}
-                    className="flex items-center text-red-600 hover:text-red-800 transition-colors duration-200"
-                  >
-                    <TrashIcon className="h-5 w-5 mr-1" />
-                    Delete Account
-                  </button>
-                </div>
+                    
+                    {/* Email Section */}
+                    <div className="border-b border-slate-200 pb-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-medium text-slate-800">Adresse email</h2>
+                        {!editMode.email ? (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setEditMode(prev => ({ ...prev, email: true }))}
+                            className="flex items-center px-3 py-1 text-teal-600 hover:text-teal-700 transition-colors duration-200"
+                          >
+                            <PencilIcon className="h-4 w-4 mr-1" />
+                            Modifier
+                          </motion.button>
+                        ) : (
+                          <div className="flex space-x-2">
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleSave('email')}
+                              disabled={isLoading}
+                              className="flex items-center px-2极 py-1 text-green-600 hover:text-green-700 transition-colors duration-200 disabled:opacity-50"
+                            >
+                              <CheckIcon className="h-4 w-4 mr-1" />
+                              Sauvegarder
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleCancel('email')}
+                              className="flex items-center px-2 py-1 text-red-600 hover:text-red-700 transition-colors duration-200"
+                            >
+                              <XMarkIcon className="h-4 w-4 mr-1" />
+                              Annuler
+                            </motion.button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {editMode.email ? (
+                        <div>
+                          <input
+                            type="email"
+                            value={profile.email}
+                            onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-teal-500 focus:border-teal-500 transition-all ${
+                              errors.email ? 'border-red-500' : 'border-slate-300'
+                            }`}
+                          />
+                          {errors.email && (
+                            <p className="mt-1 text-sm text-red-600">{errors.email[0]}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-slate-600">{profile.email}</p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  /* Security Tab */
+                  <div className="space-y-6">
+                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-yellow-700">
+                            Pour votre sécurité, veuillez garder votre mot de passe confidentiel et le mettre à jour régulièrement.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Password Section */}
+                    <div className="border-b border-slate-200 pb-6">
+                      <div className="flex justify-between items-center mb极速-4">
+                        <h2 className="text-lg font-medium text-slate-800">Changer le mot de passe</h2>
+                        {!editMode.password ? (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setEditMode(prev => ({ ...prev, password: true }))}
+                            className="flex items-center px-3 py-1 text-teal-600 hover:text-teal-700 transition-colors duration-200"
+                          >
+                            <PencilIcon className="h-4 w-4 mr-1" />
+                            Changer
+                          </motion.button>
+                        ) : (
+                          <div className="flex space-x-2">
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleSave('password')}
+                              disabled={isLoading}
+                              className="flex items-center px-2 py-1 text-green-600 hover:text-green-700 transition-colors duration-200 disabled:opacity-50"
+                            >
+                              <CheckIcon className="h-4 w-4 mr-1" />
+                              Mettre à jour
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleCancel('password')}
+                              className="flex items-center px-2 py-1 text-red-600 hover:text-red-700 transition-colors duration-200"
+                            >
+                              <XMarkIcon className="h-4 w-4 mr-1" />
+                              Annuler
+                            </motion.button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {editMode.password && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Mot de passe actuel</label>
+                            <div className="relative">
+                              <input
+                                type={showPassword.current ? "text" : "password"}
+                                value={profile.currentPassword}
+                                onChange={(e) => setProfile({ ...profile, currentPassword: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 transition-all"
+                              />
+                              <button
+                                type="button"
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                onClick={() => setShowPassword({ ...showPassword, current: !showPassword.current })}
+                              >
+                                {showPassword.current ? (
+                                  <EyeSlashIcon className="h-5 w-5 text-slate-400" />
+                                ) : (
+                                  <EyeIcon className="h-5 w-5 text-slate-400" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Nouveau mot de passe</label>
+                            <div className="relative">
+                              <input
+                                type={showPassword.new ? "text" : "password"}
+                                value={profile.newPassword}
+                                onChange={(e) => setProfile({ ...profile, newPassword: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 transition-all"
+                              />
+                              <button
+                                type="button"
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })}
+                              >
+                                {showPassword.new ? (
+                                  <EyeSlashIcon className="h-5 w-5 text-slate-极速400" />
+                                ) : (
+                                  <EyeIcon className="h-5 w-5 text-slate-400" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Confirmer le nouveau mot de passe</label>
+                            <div className="relative">
+                              <input
+                                type={showPassword.confirm ? "text" : "password"}
+                                value={profile.confirmPassword}
+                                onChange={(e) => setProfile({ ...profile, confirmPassword: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 transition-all"
+                              />
+                              <button
+                                type="button"
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })}
+                              >
+                                {showPassword.confirm ? (
+                                  <EyeSlashIcon className="h-5 w-5 text-slate-400" />
+                                ) : (
+                                  <EyeIcon className="h-5 w-5 text-slate-400" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            
-            {/* Logout Button */}
-            <div className="flex justify-end pt-4">
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
-              >
-                Logout
-              </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </main>
       </div>
+
+      <style>{`
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 };

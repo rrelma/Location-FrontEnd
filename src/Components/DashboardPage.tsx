@@ -1,29 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  BellIcon,
-  UserCircleIcon,
-  ChevronDownIcon,
   EyeIcon,
   PencilIcon,
   TrashIcon,
-  AdjustmentsHorizontalIcon,
-  XMarkIcon,
-  Bars3Icon,
   PlusIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  XMarkIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from '@heroicons/react/24/outline';
 
 // === Match C# ReservationVM ===
 type Reservation = {
   id: number;
   marque: string;
-  model: string;
+  modele: string;
   idClient: number;
   clientName: string;
-  clientRating: number; // decimal in C#, use number in JS
-  dateStartReservation: string; // DateOnly -> "YYYY-MM-DD"
-  dateExpReservation: string | null; // DateOnly? -> string | null
+  clientRating: number;
+  dateStartReservation: string;
+  dateExpReservation: string | null;
 };
 
 // === Match C# StatsVM ===
@@ -37,9 +38,8 @@ type Stats = {
 // === Match C# ReservationForm ===
 type ReservationForm = {
   id: number;
-  dateStart: string; // DateOnly -> "YYYY-MM-DD"
-  dateExp: string; // DateOnly -> "YYYY-MM-DD"
-  pricePerDay: number;
+  dateStart: string;
+  dateExp: string;
   idClient: number;
   idCar: number;
 };
@@ -47,16 +47,10 @@ type ReservationForm = {
 type FilterOptions = {
   marque: string[];
   clientRating: number[];
+  status: string[];
 };
 
-type DashboardPageProps = {
-  setIsAuthenticated: (value: boolean) => void;
-};
-
-const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => {
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+const DashboardPage = () => {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -64,9 +58,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
   const [currentReservation, setCurrentReservation] = useState<Reservation | null>(null);
   const [reservationToDelete, setReservationToDelete] = useState<number | null>(null);
   const [editedReservation, setEditedReservation] = useState<Reservation | null>(null);
-  const [cars, setCars] = useState<{ id: number; marque: string; model: string }[]>([]);
-  const navigate = useNavigate();
-
+  const [cars, setCars] = useState<{ id: number; marque: string; modele: string }[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [clients, setClients] = useState<{ id: number; name: string }[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -76,31 +69,60 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
     averageClientRating: 0,
     availableCars: 0
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [selectedMarqueEdit, setSelectedMarqueEdit] = useState('');
 
-  // === New reservation form state (match ReservationForm) ===
   const [newReservation, setNewReservation] = useState<ReservationForm>({
     id: 0,
     dateStart: '',
     dateExp: '',
-    pricePerDay: 0,
     idClient: 0,
     idCar: 0
   });
 
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     marque: [],
-    clientRating: []
+    clientRating: [],
+    status: []
   });
 
   const [filteredReservations, setFilteredReservations] = useState<Reservation[]>([]);
 
+  // Show success message
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  // Show error message
+  const showError = (message: string) => {
+    setError(message);
+    setTimeout(() => setError(null), 5000);
+  };
+
   // === Fetch data from API ===
   useEffect(() => {
-    fetchReservations();
-    fetchStats();
-    fetchClients();
-    fetchCars();
+    fetchDashboardData();
   }, []);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchReservations(),
+        fetchStats(),
+        fetchClients(),
+        fetchCars()
+      ]);
+    } catch (err) {
+      showError('Erreur lors du chargement des données');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchReservations = async () => {
     try {
@@ -109,10 +131,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
         const data: Reservation[] = await response.json();
         setReservations(data);
       } else {
-        console.error('Failed to fetch reservations');
+        throw new Error('Failed to fetch reservations');
       }
     } catch (error) {
       console.error('Error fetching reservations:', error);
+      throw error;
     }
   };
 
@@ -123,10 +146,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
         const data: Stats = await response.json();
         setStats(data);
       } else {
-        console.error('Failed to fetch stats');
+        throw new Error('Failed to fetch stats');
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
+      throw error;
     }
   };
 
@@ -137,10 +161,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
         const clientsData: { id: number; name: string }[] = await response.json();
         setClients(clientsData);
       } else {
-        console.error('Failed to fetch clients');
+        throw new Error('Failed to fetch clients');
       }
     } catch (error) {
       console.error('Error fetching clients:', error);
+      throw error;
     }
   };
 
@@ -148,39 +173,24 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
     try {
       const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/car/CarsList');
       if (response.ok) {
-        const carsData: { id: number; marque: string; model: string }[] = await response.json();
+        const carsData: { id: number; marque: string; modele: string }[] = await response.json();
         setCars(carsData);
+        console.log(carsData);
       } else {
-        console.error('Failed to fetch cars');
+        throw new Error('Failed to fetch cars');
       }
     } catch (error) {
       console.error('Error fetching cars:', error);
+      throw error;
     }
   };
-
-  // === Effect: Handle outside clicks for menus ===
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.notifications-menu') && showNotifications) {
-        setShowNotifications(false);
-      }
-      if (!target.closest('.profile-menu') && showProfileMenu) {
-        setShowProfileMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showNotifications, showProfileMenu]);
 
   // === Effect: Filter reservations ===
   useEffect(() => {
     const filtered = reservations.filter(res => {
       const matchesSearch =
         res.marque.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        res.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        res.modele.toLowerCase().includes(searchTerm.toLowerCase()) ||
         res.clientName.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesMarque = filterOptions.marque.length === 0 || filterOptions.marque.includes(res.marque);
@@ -188,7 +198,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
       const matchesRating = filterOptions.clientRating.length === 0 ||
         filterOptions.clientRating.some(rating => Math.floor(res.clientRating) === rating);
 
-      return matchesSearch && matchesMarque && matchesRating;
+      // Status filter logic (active/expired/upcoming)
+      const status = getReservationStatus(res);
+      
+      const matchesStatus = filterOptions.status.length === 0 || 
+        (filterOptions.status.includes('active') && status === 'active') ||
+        (filterOptions.status.includes('expired') && status === 'expired') ||
+        (filterOptions.status.includes('upcoming') && status === 'upcoming');
+
+      return matchesSearch && matchesMarque && matchesRating && matchesStatus;
     });
     setFilteredReservations(filtered);
   }, [searchTerm, filterOptions, reservations]);
@@ -203,7 +221,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
   };
 
   const clearAllFilters = () => {
-    setFilterOptions({ marque: [], clientRating: [] });
+    setFilterOptions({ marque: [], clientRating: [], status: [] });
     setSearchTerm('');
   };
 
@@ -219,12 +237,21 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
   const openEditModal = (res: Reservation) => {
     setCurrentReservation(res);
     setEditedReservation({ ...res });
+    setSelectedMarqueEdit(res.marque);
     setEditModalOpen(true);
   };
 
   const handleSave = async () => {
     if (editedReservation) {
       try {
+        // Find the car ID based on marque and model
+        const car = cars.find(c => c.marque === editedReservation.marque && c.modele === editedReservation.modele);
+        
+        if (!car) {
+          showError('Voiture non trouvée');
+          return;
+        }
+
         const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/Dashboard/reservations/${editedReservation.id}`, {
           method: 'PUT',
           headers: {
@@ -235,27 +262,43 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
             dateStart: editedReservation.dateStartReservation,
             dateExp: editedReservation.dateExpReservation,
             idClient: editedReservation.idClient,
-            idCar: cars.find(c => c.marque === editedReservation.marque && c.model === editedReservation.model)?.id || 0,
-            pricePerDay: 0 // You might need to adjust this based on your API
+            idCar: car.id,
+            pricePerDay: 100 // Default value, adjust as needed
           }),
         });
 
         if (response.ok) {
-          fetchReservations(); // Refresh the list
+          await fetchReservations();
           setEditModalOpen(false);
+          showSuccess('Réservation mise à jour avec succès');
         } else {
-          console.error('Failed to update reservation');
+          const errorData = await response.json();
+          showError(errorData.message || 'Erreur lors de la mise à jour');
         }
       } catch (error) {
         console.error('Error updating reservation:', error);
-      }
+        showError('Erreur de connexion au serveur');
+        }
     }
   };
 
   const handleAddReservation = async () => {
     try {
-      const selectedCar = cars.find(car => car.id === newReservation.idCar);
+      // Validate form
+      if (!newReservation.idCar || !newReservation.idClient || !newReservation.dateStart || !newReservation.dateExp) {
+        showError('Veuillez remplir tous les champs obligatoires');
+        return;
+      }
+
+      // Validate dates
+      const startDate = new Date(newReservation.dateStart);
+      const endDate = new Date(newReservation.dateExp);
       
+      if (endDate <= startDate) {
+        showError('La date de fin doit être après la date de début');
+        return;
+      }
+
       const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/Dashboard/reservations', {
         method: 'POST',
         headers: {
@@ -265,21 +308,23 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
       });
 
       if (response.ok) {
-        fetchReservations(); // Refresh the list
+        await fetchReservations();
         setAddModalOpen(false);
         setNewReservation({
           id: 0,
           dateStart: '',
           dateExp: '',
-          pricePerDay: 0,
           idClient: 0,
           idCar: 0
         });
+        showSuccess('Réservation ajoutée avec succès');
       } else {
-        console.error('Failed to add reservation');
+        const errorData = await response.json();
+        showError(errorData.message || 'Erreur lors de l\'ajout');
       }
     } catch (error) {
       console.error('Error adding reservation:', error);
+      showError('Erreur de connexion au serveur');
     }
   };
 
@@ -296,13 +341,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
         });
 
         if (response.ok) {
-          fetchReservations(); // Refresh the list
+          await fetchReservations();
           setDeleteConfirmOpen(false);
+          showSuccess('Réservation supprimée avec succès');
         } else {
-          console.error('Failed to delete reservation');
+          const errorData = await response.json();
+          showError(errorData.message || 'Erreur lors de la suppression');
         }
       } catch (error) {
         console.error('Error deleting reservation:', error);
+        showError('Erreur de connexion au serveur');
       }
     }
   };
@@ -310,135 +358,129 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
   const uniqueMarques = [...new Set(reservations.map(res => res.marque))];
   const uniqueRatings = [1, 2, 3, 4, 5];
 
-  return (
-    <div className="flex min-h-screen bg-gray-50 overflow-auto">
-      {/* Sidebar */}
-      <div
-        className={`inset-y-0 left-0 z-30 w-64 bg-white shadow-md transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-medium">Filtres</h3>
-            <button onClick={clearAllFilters} className="text-xs text-indigo-600 hover:text-indigo-800">
-              Tout effacer
-            </button>
-          </div>
-          <div className="mb-3">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Rechercher..."
-                className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
+  // Get status of reservation (active/expired/upcoming)
+  const getReservationStatus = (res: Reservation) => {
+    const now = new Date();
+    const startDate = new Date(res.dateStartReservation);
+    const endDate = res.dateExpReservation ? new Date(res.dateExpReservation) : null;
+    
+    if (startDate > now) {
+      return 'upcoming'; // Reservation hasn't started yet
+    } else if (endDate && endDate < now) {
+      return 'expired'; // Reservation has ended
+    } else {
+      return 'active'; // Reservation is currently active
+    }
+  };
 
-          <div className="space-y-3">
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-1">Marque</h4>
-              <div className="space-y-1">
-                {uniqueMarques.map(marque => (
-                  <div key={marque} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={filterOptions.marque.includes(marque)}
-                      onChange={() => toggleFilter('marque', marque)}
-                      className="h-4 w-4 text-indigo-600 rounded"
-                    />
-                    <label className="ml-2 text-sm text-gray-700">{marque}</label>
-                  </div>
-                ))}
-              </div>
-            </div>
+  // Find car ID based on marque and modele
+  const findCarId = (marque: string, modele: string) => {
+    const car = cars.find(c => c.marque === marque && c.modele === modele);
+    return car ? car.id : 0;
+  };
 
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-1">Note Client</h4>
-              <div className="space-y-1">
-                {uniqueRatings.map(rating => (
-                  <div key={rating} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={filterOptions.clientRating.includes(rating)}
-                      onChange={() => toggleFilter('clientRating', rating)}
-                      className="h-4 w-4 text-indigo-600 rounded"
-                    />
-                    <label className="ml-2 text-sm text-gray-700 flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <svg key={i} className={`h-3 w-3 ${i < rating ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                      ))}
-                      {rating > 0 && <span className="ml-1">& plus</span>}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Chargement des données...</p>
         </div>
       </div>
+    );
+  }
 
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      <div className="flex-1 min-h-screen overflow-auto">
-        <header className="bg-white shadow-sm z-10 lg:hidden">
-          <div className="flex items-center justify-between px-4 py-3">
-            <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-gray-600">
-              <Bars3Icon className="h-6 w-6" />
-            </button>
-            <h1 className="text-xl font-bold text-indigo-600">Tableau de bord</h1>
-            <div className="flex items-center space-x-3">
-              <button onClick={() => setMobileFiltersOpen(true)} className="p-1 text-gray-500 hover:text-gray-600">
-                <AdjustmentsHorizontalIcon className="h-5 w-5" />
-              </button>
-              <button onClick={() => setShowNotifications(!showNotifications)} className="p-1 text-gray-500 hover:text-gray-600 relative">
-                <BellIcon className="h-5 w-5" />
-                <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
-              </button>
-            </div>
-          </div>
-        </header>
-
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 overflow-auto">
+      {/* Floating decorative elements */}
+      <div className="absolute top-10 left-10 w-72 h-72 bg-teal-100 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
+      <div className="absolute top-10 right-10 w-72 h-72 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
+      <div className="absolute bottom-10 left-20 w-72 h-72 bg-emerald-100 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
+      
+      {/* Main content */}
+      <div className="relative z-10">
         <main className="p-4 lg:p-6">
+          {/* Notification messages - Inside main content */}
+          <AnimatePresence>
+            <div className="mb-6 space-y-4">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-red-50 border border-red-200 rounded-lg shadow-sm p-4 flex items-start"
+                >
+                  <ExclamationTriangleIcon className="h-6 w-6 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-red-800">Erreur</h3>
+                    <p className="mt-1 text-sm text-red-700">{error}</p>
+                  </div>
+                  <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800">
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                </motion.div>
+              )}
+              
+              {successMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-green-50 border border-green-200 rounded-lg shadow-sm p-4 flex items-start"
+                >
+                  <CheckCircleIcon className="h-6 w-6 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-green-800">Succès</h3>
+                    <p className="mt-1 text-sm text-green-700">{successMessage}</p>
+                  </div>
+                  <button onClick={() => setSuccessMessage(null)} className="text-green-600 hover:text-green-800">
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          </AnimatePresence>
+
+          {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <motion.div whileHover={{ y: -2 }} className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">
+            <motion.div 
+              whileHover={{ y: -2 }} 
+              className="bg-white p-4 rounded-xl shadow-sm border border-slate-100"
+            >
               <div className="flex items-center">
-                <div className="p-2 rounded-full bg-green-100 text-green-600 mr-3">
+                <div className="p-2 rounded-full bg-teal-100 text-teal-600 mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Voitures disponibles</p>
-                  <p className="text-xl font-semibold">{stats.availableCars}</p>
+                  <p className="text-sm text-slate-500">Voitures disponibles</p>
+                  <p className="text-xl font-semibold text-slate-800">{stats.availableCars}</p>
                 </div>
               </div>
             </motion.div>
 
-            <motion.div whileHover={{ y: -2 }} className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-indigo-500">
+            <motion.div 
+              whileHover={{ y: -2 }} 
+              className="bg-white p-4 rounded-xl shadow-sm border border-slate-100"
+            >
               <div className="flex items-center">
-                <div className="p-2 rounded-full bg-indigo-100 text-indigo-600 mr-3">
+                <div className="p-2 rounded-full bg-blue-100 text-blue-600 mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Actuellement louées</p>
-                  <p className="text-xl font-semibold">{stats.rentedCars}</p>
+                  <p className="text-sm text-slate-500">Actuellement louées</p>
+                  <p className="text-xl font-semibold text-slate-800">{stats.rentedCars}</p>
                 </div>
               </div>
             </motion.div>
 
-            <motion.div whileHover={{ y: -2 }} className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-red-500">
+            <motion.div 
+              whileHover={{ y: -2 }} 
+              className="bg-white p-4 rounded-xl shadow-sm border border-slate-100"
+            >
               <div className="flex items-center">
                 <div className="p-2 rounded-full bg-red-100 text-red-600 mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -446,13 +488,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Assurance expirant</p>
-                  <p className="text-xl font-semibold">{stats.expiringInsuranceThisWeek}</p>
+                  <p className="text-sm text-slate-500">Assurance expirant</p>
+                  <p className="text-xl font-semibold text-slate-800">{stats.expiringInsuranceThisWeek}</p>
                 </div>
               </div>
             </motion.div>
 
-            <motion.div whileHover={{ y: -2 }} className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-yellow-500">
+            <motion.div 
+              whileHover={{ y: -2 }} 
+              className="bg-white p-4 rounded-xl shadow-sm border border-slate-100"
+            >
               <div className="flex items-center">
                 <div className="p-2 rounded-full bg-yellow-100 text-yellow-600 mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -460,117 +505,388 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Note moyenne client</p>
-                  <p className="text-xl font-semibold">{stats.averageClientRating}/5</p>
+                  <p className="text-sm text-slate-500">Note moyenne client</p>
+                  <p className="text-xl font-semibold text-slate-800">{stats.averageClientRating}/5</p>
                 </div>
               </div>
             </motion.div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center">
-              <h2 className="font-semibold">Locations en cours</h2>
-              <div className="flex items-center space-x-4">
-                <p className="text-sm text-gray-500">
-                  {filteredReservations.length} {filteredReservations.length === 1 ? 'réservation' : 'réservations'}
-                </p>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setAddModalOpen(true)}
-                  className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          {/* Filters Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100 mb-6"
+          >
+            <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="font-semibold text-slate-800">Filtres</h2>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                 >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  Ajouter
-                </motion.button>
+                  <FunnelIcon className="h-5 w-5 mr-1" />
+                  {showFilters ? 'Masquer' : 'Afficher'}
+                </button>
+                {(searchTerm || filterOptions.marque.length > 0 || filterOptions.clientRating.length > 0 || filterOptions.status.length > 0) && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <XMarkIcon className="h-5 w-5 mr-1" />
+                    Effacer
+                  </button>
+                )}
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Détails</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Note</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dates</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredReservations.map(res => (
-                    <tr key={res.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">{res.marque} {res.model}</div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{res.clientName}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
+            
+            {showFilters && (
+              <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                {/* Search Input */}
+                <div className="lg:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Recherche</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <MagnifyingGlassIcon className="h-5 w-5 text-slate-400" />
+                    </div>
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Rechercher par marque, modèle ou client..."
+                      className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 transition-all"
+                    />
+                  </div>
+                </div>
+                
+                {/* Marque Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Marque</label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {uniqueMarques.map(marque => (
+                      <div key={marque} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`marque-${marque}`}
+                          checked={filterOptions.marque.includes(marque)}
+                          onChange={() => toggleFilter('marque', marque)}
+                          className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-slate-300 rounded"
+                        />
+                        <label htmlFor={`marque-${marque}`} className="ml-2 text-sm text-slate-700">
+                          {marque}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Rating Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Note client</label>
+                  <div className="space-y-2">
+                    {uniqueRatings.map(rating => (
+                      <div key={rating} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`rating-${rating}`}
+                          checked={filterOptions.clientRating.includes(rating)}
+                          onChange={() => toggleFilter('clientRating', rating)}
+                          className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-slate-300 rounded"
+                        />
+                        <label htmlFor={`rating-${rating}`} className="ml-2 text-sm text-slate-700 flex items-center">
                           {[...Array(5)].map((_, i) => (
                             <svg
                               key={i}
-                              className={`h-5 w-5 ${i < Math.floor(res.clientRating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                              className={`h-4 w-4 ${i < rating ? 'text-yellow-400' : 'text-slate-300'}`}
                               fill="currentColor"
                               viewBox="0 0 20 20"
                             >
                               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                             </svg>
                           ))}
-                          <span className="ml-1 text-gray-600">{res.clientRating}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        <div>Début: {res.dateStartReservation ? new Date(res.dateStartReservation).toLocaleDateString() : 'N/A'}</div>
-                        <div>Fin: {res.dateExpReservation ? new Date(res.dateExpReservation).toLocaleDateString() : 'N/A'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end space-x-3">
-                          <motion.button onClick={() => openEditModal(res)} className="text-blue-600 hover:text-blue-900" title="Modifier">
-                            <PencilIcon className="h-5 w-5" />
-                          </motion.button>
-                          <motion.button onClick={() => confirmDelete(res.id)} className="text-red-600 hover:text-red-900" title="Supprimer">
-                            <TrashIcon className="h-5 w-5" />
-                          </motion.button>
-                        </div>
-                      </td>
-                    </tr>
+                          <span className="ml-1">({rating})</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Statut</label>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="status-active"
+                        checked={filterOptions.status.includes('active')}
+                        onChange={() => toggleFilter('status', 'active')}
+                        className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-slate-300 rounded"
+                      />
+                      <label htmlFor="status-active" className="ml-2 text-sm text-slate-700">
+                        Actif
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="status-expired"
+                        checked={filterOptions.status.includes('expired')}
+                        onChange={() => toggleFilter('status', 'expired')}
+                        className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-slate-300 rounded"
+                      />
+                      <label htmlFor="status-expired" className="ml-2 text-sm text-slate-700">
+                        Expiré
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="status-upcoming"
+                        checked={filterOptions.status.includes('upcoming')}
+                        onChange={() => toggleFilter('status', 'upcoming')}
+                        className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-slate-300 rounded"
+                      />
+                      <label htmlFor="status-upcoming" className="ml-2 text-sm text-slate-700">
+                        À venir
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Active filters display */}
+            {(searchTerm || filterOptions.marque.length > 0 || filterOptions.clientRating.length > 0 || filterOptions.status.length > 0) && (
+              <div className="px-4 py-3 bg-slate-50 border-t border-slate-100">
+                <div className="flex flex-wrap gap-2">
+                  {searchTerm && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                      Recherche: "{searchTerm}"
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="ml-1 text-teal-600 hover:text-teal-800"
+                      >
+                        <XMarkIcon className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  
+                  {filterOptions.marque.map(marque => (
+                    <span key={marque} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Marque: {marque}
+                      <button
+                        onClick={() => removeFilter('marque', marque)}
+                        className="ml-1 text-blue-600 hover:text-blue-800"
+                      >
+                        <XMarkIcon className="h-3 w-3" />
+                      </button>
+                    </span>
                   ))}
-                </tbody>
-              </table>
+                  
+                  {filterOptions.clientRating.map(rating => (
+                    <span key={rating} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Note: {rating} étoile{rating > 1 ? 's' : ''}
+                      <button
+                        onClick={() => removeFilter('clientRating', rating)}
+                        className="ml-1 text-yellow-600 hover:text-yellow-800"
+                      >
+                        <XMarkIcon className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+
+                  {filterOptions.status.map(status => (
+                    <span key={status} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      Statut: {status === 'active' ? 'Actif' : status === 'expired' ? 'Expiré' : 'À venir'}
+                      <button
+                        onClick={() => removeFilter('status', status)}
+                        className="ml-1 text-purple-600 hover:text-purple-800"
+                      >
+                        <XMarkIcon className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Reservations Table */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100"
+          >
+            <div className="px-4 py-3 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <h2 className="font-semibold text-slate-800 text-lg">Locations en cours</h2>
+              <div className="flex items-center space-x-3">
+                <p className="text-sm text-slate-500">
+                  {filteredReservations.length} {filteredReservations.length === 1 ? 'résultat' : 'résultats'}
+                  {(searchTerm || filterOptions.marque.length > 0 || filterOptions.clientRating.length > 0 || filterOptions.status.length > 0) && 
+                    ` (${reservations.length} au total)`}
+                </p>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setAddModalOpen(true)}
+                  className="flex items-center px-3 py-2 bg-gradient-to-r from-teal-600 to-blue-600 text-white rounded-lg hover:from-teal-700 hover:to-blue-700 transition-all text-sm"
+                >
+                  <PlusIcon className="h-5 w-5 mr-1" />
+                  <span className="hidden sm:inline">Ajouter</span>
+                </motion.button>
+              </div>
             </div>
-          </div>
+            <div className="overflow-x-auto">
+              {filteredReservations.length > 0 ? (
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Détails</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Client</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Note</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Dates</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Statut</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-200">
+                    {filteredReservations.map(res => {
+                      const status = getReservationStatus(res);
+                      return (
+                        <tr key={res.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-4">
+                            <div className="font-medium text-slate-900">{res.marque} {res.modele}</div>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-500">{res.clientName}</td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <svg
+                                  key={i}
+                                  className={`h-5 w-5 ${i < Math.floor(res.clientRating) ? 'text-yellow-400' : 'text-slate-300'}`}
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                              <span className="ml-1 text-slate-600">{res.clientRating}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-500">
+                            <div>Début: {res.dateStartReservation ? new Date(res.dateStartReservation).toLocaleDateString() : 'N/A'}</div>
+                            <div>Fin: {res.dateExpReservation ? new Date(res.dateExpReservation).toLocaleDateString() : 'N/A'}</div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              status === 'active' 
+                                ? 'bg-green-100 text-green-800' 
+                                : status === 'expired' 
+                                  ? 'bg-red-100 text-red-800' 
+                                  : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {status === 'active' ? 'Actif' : status === 'expired' ? 'Expiré' : 'À venir'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end space-x-2">
+                              <motion.button 
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => openEditModal(res)} 
+                                className="text-blue-600 hover:text-blue-800 transition-colors p-1" 
+                                title="Modifier"
+                              >
+                                <PencilIcon className="h-5 w-5" />
+                              </motion.button>
+                              <motion.button 
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => confirmDelete(res.id)} 
+                                className="text-red-600 hover:text-red-800 transition-colors p-1" 
+                                title="Supprimer"
+                              >
+                                <TrashIcon className="h-5 w-5" />
+                              </motion.button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="p-8 text-center">
+                  <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-slate-900">Aucune réservation</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {searchTerm || filterOptions.marque.length > 0 || filterOptions.clientRating.length > 0 || filterOptions.status.length > 0
+                      ? "Essayez de modifier vos filtres ou votre recherche."
+                      : "Commencez par ajouter une nouvelle réservation."}
+                  </p>
+                  <div className="mt-6">
+                    <button
+                      onClick={() => {
+                        if (searchTerm || filterOptions.marque.length > 0 || filterOptions.clientRating.length > 0 || filterOptions.status.length > 0) {
+                          clearAllFilters();
+                        } else {
+                          setAddModalOpen(true);
+                        }
+                      }}
+                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+                    >
+                      <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
+                      {searchTerm || filterOptions.marque.length > 0 || filterOptions.clientRating.length > 0 || filterOptions.status.length > 0
+                        ? "Effacer les filtres"
+                        : "Ajouter une réservation"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
         </main>
       </div>
 
       {/* Add Modal */}
       {addModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto border border-slate-200"
+          >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Ajouter une réservation</h3>
-              <button onClick={() => setAddModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <h3 className="text-lg font-medium text-slate-800">Ajouter une réservation</h3>
+              <button onClick={() => setAddModalOpen(false)} className="text-slate-500 hover:text-slate-700 transition-colors">
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Voiture</label>
+                <label className="block text-sm font-medium text-slate-700">Voiture <span className="text-red-500">*</span></label>
                 <select
                   value={newReservation.idCar}
                   onChange={(e) => setNewReservation({ ...newReservation, idCar: parseInt(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500"
+                  className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition-all"
                 >
                   <option value={0}>Sélectionner une voiture</option>
                   {cars.map(car => (
-                    <option key={car.id} value={car.id}>{car.marque} {car.model}</option>
+                    <option key={car.id} value={car.id}>{car.marque} {car.modele}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Client</label>
+                <label className="block text-sm font-medium text-slate-700">Client <span className="text-red-500">*</span></label>
                 <select
                   value={newReservation.idClient}
                   onChange={(e) => setNewReservation({ ...newReservation, idClient: parseInt(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500"
+                  className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition-all"
                 >
                   <option value={0}>Sélectionner un client</option>
                   {clients.map(client => (
@@ -579,80 +895,94 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Date de début</label>
+                <label className="block text-sm font-medium text-slate-700">Date de début <span className="text-red-500">*</span></label>
                 <input
                   type="date"
                   value={newReservation.dateStart}
                   onChange={(e) => setNewReservation({ ...newReservation, dateStart: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500"
+                  className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Date de fin</label>
+                <label className="block text-sm font-medium text-slate-700">Date de fin <span className="text-red-500">*</span></label>
                 <input
                   type="date"
                   value={newReservation.dateExp}
                   onChange={(e) => setNewReservation({ ...newReservation, dateExp: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500"
+                  className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition-all"
                 />
               </div>
-    
+              
             </div>
             <div className="mt-6 flex justify-end space-x-3">
               <button
                 onClick={() => setAddModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={handleAddReservation}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 transition-all"
               >
                 Ajouter
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
 
       {/* Edit Modal */}
       {editModalOpen && editedReservation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto border border-slate-200"
+          >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Modifier la réservation</h3>
-              <button onClick={() => setEditModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <h3 className="text-lg font-medium text-slate-800">Modifier la réservation</h3>
+              <button onClick={() => setEditModalOpen(false)} className="text-slate-500 hover:text-slate-700 transition-colors">
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
             <div className="space-y-4">
+              {/* Car Selection - Same as Add Modal */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Marque</label>
-                <input
-                  type="text"
-                  value={editedReservation.marque}
-                  onChange={(e) => setEditedReservation({ ...editedReservation, marque: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500"
-                  disabled
-                />
+                <label className="block text-sm font-medium text-slate-700">Voiture <span className="text-red-500">*</span></label>
+                <select
+                  value={findCarId(editedReservation.marque, editedReservation.modele)}
+                  onChange={(e) => {
+                    const carId = parseInt(e.target.value);
+                    if (carId > 0) {
+                      const selectedCar = cars.find(c => c.id === carId);
+                      if (selectedCar) {
+                        setEditedReservation({ 
+                          ...editedReservation, 
+                          marque: selectedCar.marque,
+                          modele: selectedCar.modele
+                        });
+                        setSelectedMarqueEdit(selectedCar.marque);
+                      }
+                    }
+                  }}
+                  className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition-all"
+                >
+                  <option value={0}>Sélectionner une voiture</option>
+                  {cars.map(car => (
+                    <option key={car.id} value={car.id}>
+                      {car.marque} {car.modele}
+                    </option>
+                  ))}
+                </select>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-700">Modèle</label>
-                <input
-                  type="text"
-                  value={editedReservation.model}
-                  onChange={(e) => setEditedReservation({ ...editedReservation, model: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500"
-                  disabled
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Client</label>
+                <label className="block text-sm font-medium text-slate-700">Client <span className="text-red-500">*</span></label>
                 <select
                   value={editedReservation.idClient}
                   onChange={(e) => setEditedReservation({ ...editedReservation, idClient: parseInt(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500"
+                  className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition-all"
                 >
                   {clients.map(client => (
                     <option key={client.id} value={client.id}>{client.name}</option>
@@ -660,70 +990,92 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setIsAuthenticated }) => 
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Date de début</label>
+                <label className="block text-sm font-medium text-slate-700">Date de début <span className="text-red-500">*</span></label>
                 <input
                   type="date"
                   value={editedReservation.dateStartReservation}
                   onChange={(e) => setEditedReservation({ ...editedReservation, dateStartReservation: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500"
+                  className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Date de fin</label>
+                <label className="block text-sm font-medium text-slate-700">Date de fin</label>
                 <input
                   type="date"
                   value={editedReservation.dateExpReservation || ''}
                   onChange={(e) => setEditedReservation({ ...editedReservation, dateExpReservation: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500"
+                  className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition-all"
                 />
               </div>
             </div>
             <div className="mt-6 flex justify-end space-x-3">
               <button
                 onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 transition-all"
               >
                 Enregistrer
               </button>
             </div>
-            </div>
+          </motion.div>
         </div>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-4 md:p-6 w-full max-w-md border border-slate-200"
+          >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Confirmer la suppression</h3>
-              <button onClick={() => setDeleteConfirmOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <h3 className="text-lg font-medium text-slate-800">Confirmer la suppression</h3>
+              <button onClick={() => setDeleteConfirmOpen(false)} className="text-slate-500 hover:text-slate-700 transition-colors">
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
-            <p className="mb-6">Êtes-vous sûr de vouloir supprimer cette réservation ? Cette action est irréversible.</p>
+            <p className="mb-6 text-slate-600">Êtes-vous sûr de vouloir supprimer cette réservation ? Cette action est irréversible.</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setDeleteConfirmOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
               >
                 Supprimer
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+
+      <style>{`
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 };
