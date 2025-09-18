@@ -1,10 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, NavLink } from 'react-router-dom';
-import { useState, createContext, useContext } from 'react';
+import { useState, createContext, useContext, useEffect } from 'react';
 import './App.css';
 import LoginForm from './Components/LoginForm';
 import DashboardPage from './Components/DashboardPage';
 import CarsPage from './Components/CarsPage';
-import React, { useEffect } from 'react';
 import VignettesPage from './Components/VignettesPage';
 import InsurancesPage from './Components/InsurancesPage';
 import ClientsPage from './Components/ClientsPage';
@@ -45,11 +44,20 @@ export const useNotification = () => {
 };
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Check localStorage for existing authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const savedAuth = localStorage.getItem('isAuthenticated');
+    return savedAuth === 'true';
+  });
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
+
+  // Save authentication state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('isAuthenticated', isAuthenticated.toString());
+  }, [isAuthenticated]);
 
   const showNotification = (notification: NotificationType) => {
     setNotifications(prev => [...prev, notification]);
@@ -90,6 +98,11 @@ function App() {
       return true;
     }
     return false;
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('isAuthenticated');
   };
 
   // Composant ProtectedRoute
@@ -275,7 +288,7 @@ function App() {
                             Votre profil
                           </NavLink>
                           <button 
-                            onClick={() => setIsAuthenticated(false)}
+                            onClick={handleLogout}
                             className="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors flex items-center"
                           >
                             <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
