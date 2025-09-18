@@ -88,6 +88,8 @@ const DashboardPage = () => {
     clientRating: [],
     status: []
   });
+  const apiUrl = import.meta.env.VITE_API_URL;
+
 
   const [filteredReservations, setFilteredReservations] = useState<Reservation[]>([]);
 
@@ -126,7 +128,7 @@ const DashboardPage = () => {
 
   const fetchReservations = async () => {
     try {
-      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/Dashboard/reservations');
+      const response = await fetch(`${apiUrl}/api/Dashboard/reservations`);
       if (response.ok) {
         const data: Reservation[] = await response.json();
         setReservations(data);
@@ -134,14 +136,13 @@ const DashboardPage = () => {
         throw new Error('Failed to fetch reservations');
       }
     } catch (error) {
-      console.error('Error fetching reservations:', error);
       throw error;
     }
   };
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/Dashboard/stats');
+      const response = await fetch(`${apiUrl}/api/Dashboard/stats`);
       if (response.ok) {
         const data: Stats = await response.json();
         setStats(data);
@@ -149,14 +150,13 @@ const DashboardPage = () => {
         throw new Error('Failed to fetch stats');
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
       throw error;
     }
   };
 
   const fetchClients = async () => {
     try {
-      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/client/ClientsList');
+      const response = await fetch(`${apiUrl}/api/client/ClientsList`);
       if (response.ok) {
         const clientsData: { id: number; name: string }[] = await response.json();
         setClients(clientsData);
@@ -164,23 +164,20 @@ const DashboardPage = () => {
         throw new Error('Failed to fetch clients');
       }
     } catch (error) {
-      console.error('Error fetching clients:', error);
       throw error;
     }
   };
 
   const fetchCars = async () => {
     try {
-      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/car/CarsList');
+      const response = await fetch(`${apiUrl}/api/car/CarsList`);
       if (response.ok) {
         const carsData: { id: number; marque: string; modele: string }[] = await response.json();
         setCars(carsData);
-        console.log(carsData);
       } else {
         throw new Error('Failed to fetch cars');
       }
     } catch (error) {
-      console.error('Error fetching cars:', error);
       throw error;
     }
   };
@@ -252,7 +249,7 @@ const DashboardPage = () => {
           return;
         }
 
-        const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/Dashboard/reservations/${editedReservation.id}`, {
+        const response = await fetch(`${apiUrl}/api/Dashboard/reservations/${editedReservation.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -276,7 +273,6 @@ const DashboardPage = () => {
           showError(errorData.message || 'Erreur lors de la mise à jour');
         }
       } catch (error) {
-        console.error('Error updating reservation:', error);
         showError('Erreur de connexion au serveur');
         }
     }
@@ -299,7 +295,7 @@ const DashboardPage = () => {
         return;
       }
 
-      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/Dashboard/reservations', {
+      const response = await fetch(`${apiUrl}/api/Dashboard/reservations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -323,7 +319,7 @@ const DashboardPage = () => {
         showError(errorData.message || 'Erreur lors de l\'ajout');
       }
     } catch (error) {
-      console.error('Error adding reservation:', error);
+
       showError('Erreur de connexion au serveur');
     }
   };
@@ -336,7 +332,7 @@ const DashboardPage = () => {
   const handleDelete = async () => {
     if (reservationToDelete) {
       try {
-        const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/Dashboard/reservations/${reservationToDelete}`, {
+        const response = await fetch(`${apiUrl}/api/Dashboard/reservations/${reservationToDelete}`, {
           method: 'DELETE',
         });
 
@@ -349,7 +345,6 @@ const DashboardPage = () => {
           showError(errorData.message || 'Erreur lors de la suppression');
         }
       } catch (error) {
-        console.error('Error deleting reservation:', error);
         showError('Erreur de connexion au serveur');
       }
     }

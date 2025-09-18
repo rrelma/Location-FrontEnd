@@ -29,7 +29,9 @@ const CompagniesPage = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   const [formErrors, setFormErrors] = useState<Record<string, string[]>>({});
-  const API_BASE_URL = 'https://palmares20250909131957.azurewebsites.net/api/compagnie';
+  const apiUrl = import.meta.env.VITE_API_URL;
+
+  const API_BASE_URL = `${apiUrl}/api/compagnie`;
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
@@ -68,7 +70,6 @@ const CompagniesPage = () => {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch companies';
         setError(errorMessage);
         showError(errorMessage);
-        console.error("Error fetching companies:", err);
       } finally {
         setIsLoading(false);
       }
@@ -149,7 +150,7 @@ const CompagniesPage = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add company';
       showError(errorMessage);
-      console.error("Error adding company:", err);
+
     } finally {
       setIsLoading(false);
     }
@@ -200,7 +201,6 @@ const CompagniesPage = () => {
         } else {
           // Handle non-JSON responses (like HTML error pages)
           const errorText = await response.text();
-          console.error("Non-JSON error response:", errorText);
           showError("Une erreur s'est produite lors de la modification. Veuillez réessayer.");
         }
         return;
@@ -230,7 +230,6 @@ const CompagniesPage = () => {
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to update company';
     showError(errorMessage);
-    console.error("Error updating company:", err);
   } finally {
     setIsLoading(false);
   }
@@ -256,7 +255,6 @@ const CompagniesPage = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete company';
       showError(errorMessage);
-      console.error("Error deleting company:", err);
     } finally {
       setIsLoading(false);
       setCompanyToDelete(null);

@@ -50,6 +50,8 @@ const ClientsPage = () => {
     telephone: ''
   });
 
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   // Filter options
   type FilterOptions = {
     rating: number[];
@@ -84,7 +86,7 @@ const ClientsPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/client');
+      const response = await fetch(`${apiUrl}/api/client`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -95,7 +97,6 @@ const ClientsPage = () => {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
       showError(errorMessage);
-      console.error('Error fetching clients:', err);
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +161,7 @@ const ClientsPage = () => {
     setFormErrors({});
     
     try {
-      const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/client/${editedClient.id}`, {
+      const response = await fetch(`${apiUrl}/api/client/${editedClient.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -207,7 +208,6 @@ const ClientsPage = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update client';
       showError(errorMessage);
-      console.error("Error updating client:", err);
     } finally {
       setIsLoading(false);
     }
@@ -219,7 +219,7 @@ const ClientsPage = () => {
     setFormErrors({});
     
     try {
-      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/client', {
+      const response = await fetch(`${apiUrl}/api/client`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -267,7 +267,6 @@ const ClientsPage = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add client';
       showError(errorMessage);
-      console.error("Error adding client:", err);
     } finally {
       setIsLoading(false);
     }
@@ -281,7 +280,7 @@ const ClientsPage = () => {
     setOperationError(null);
 
     try {
-      const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/client/${clientToDelete}`, {
+      const response = await fetch(`${apiUrl}/api/client/${clientToDelete}`, {
         method: 'DELETE'
       });
 
@@ -297,7 +296,6 @@ const ClientsPage = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete client';
       showError(errorMessage);
-      console.error("Error deleting client:", err);
     } finally {
       setIsLoading(false);
     }

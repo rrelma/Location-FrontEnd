@@ -24,7 +24,8 @@ type UserProfile = {
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   const [profile, setProfile] = useState<UserProfile>({
     id: 0,
     username: '',
@@ -78,7 +79,7 @@ const ProfilePage = () => {
           throw new Error('No user ID found in session');
         }
 
-        const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/profile/${userid}`, {
+        const response = await fetch(`${apiUrl}/api/profile/${userid}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -106,7 +107,6 @@ const ProfilePage = () => {
         }));
 
       } catch (error) {
-        console.error('Failed to fetch user data:', error);
         showError('Failed to load profile data. Please try again.');
       } finally {
         setIsLoading(false);
@@ -117,100 +117,110 @@ const ProfilePage = () => {
   }, [navigate]);
 
   const handleSave = async (field: keyof typeof editMode) => {
-    setIsLoading(true);
-    setErrors({});
-    setOperationError(null);
-    
-    try {
-        const userId = sessionStorage.getItem('userid');
-        if (!userId) {
-            throw new Error('No user ID found in session');
-        }
+  setIsLoading(true);
+  setErrors({});
+  setOperationError(null);
+  
+  try {
+      const userId = sessionStorage.getItem('userid');
+      if (!userId) {
+          throw new Error('No user ID found in session');
+      }
 
-        let updateData: any = { id: parseInt(userId) };
-        
-        if (field === 'username') {
-            updateData = { 
-                id: parseInt(userId),
-                username: profile.username 
-            };
-        } else if (field === 'email') {
-            updateData = { 
-                id: parseInt(userId),
-                email: profile.email 
-            };
-        } else if (field === 'password') {
-            if (profile.newPassword !== profile.confirmPassword) {
-                showError('Les nouveaux mots de passe ne correspondent pas');
-                setIsLoading(false);
-                return;
-            }
-            updateData = {
-                id: parseInt(userId),
-                password: profile.newPassword
-            };
-        }
+      let updateData: any = { id: parseInt(userId) };
+      
+      if (field === 'username') {
+          updateData = { 
+              id: parseInt(userId),
+              username: profile.username 
+          };
+      } else if (field === 'email') {
+          updateData = { 
+              id: parseInt(userId),
+              email: profile.email 
+          };
+      } else if (field === 'password') {
+          if (profile.newPassword !== profile.confirmPassword) {
+              showError('Les nouveaux mots de passe ne correspondent pas');
+              setIsLoading(false);
+              return;
+          }
+          updateData = {
+              id: parseInt(userId),
+              password: profile.newPassword
+          };
+      }
 
-        const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/profile/${userId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify(updateData)
-        });
-        
-        if (!response.ok) {
-            let errorMessage = `Échec de la mise à jour de ${field}`;
-            const errorData = await response.json();
-            
-            if (response.status === 400 && errorData.errors) {
-                const validationErrors: Record<string, string[]> = {};
-                for (const [key, value] of Object.entries(errorData.errors)) {
-                    if (Array.isArray(value)) {
-                        const cleanKey = key.includes('.') ? key.split('.').pop()! : key;
-                        validationErrors[cleanKey] = value as string[];
-                    }
-                }
-                setErrors(validationErrors);
-                
-                // Show the first validation error
-                const firstError = Object.values(validationErrors)[0]?.[0];
-                if (firstError) {
-                  showError(firstError);
-                }
-                return;
-            }
-            
-            errorMessage = errorData.title || errorData.message || errorMessage;
-            throw new Error(errorMessage);
-        }
+      const response = await fetch(`${apiUrl}/api/profile/${userId}`, {
+          method: 'PUT',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(updateData)
+      });
+      
+      // Handle non-JSON responses gracefully
+      let errorData;
+      try {
+          errorData = await response.json();
+      } catch (jsonError) {
+          // If response is not JSON, create a simple error object
+          errorData = {
+              message: `HTTP error! status: ${response.status}`,
+              status: response.status
+          };
+      }
+      
+      if (!response.ok) {
+          let errorMessage = `Échec de la mise à jour de ${field}`;
+          
+          if (response.status === 400 && errorData.errors) {
+              const validationErrors: Record<string, string[]> = {};
+              for (const [key, value] of Object.entries(errorData.errors)) {
+                  if (Array.isArray(value)) {
+                      const cleanKey = key.includes('.') ? key.split('.').pop()! : key;
+                      validationErrors[cleanKey] = value as string[];
+                  }
+              }
+              setErrors(validationErrors);
+              
+              // Show the first validation error
+              const firstError = Object.values(validationErrors)[0]?.[0];
+              if (firstError) {
+                showError(firstError);
+              }
+              return;
+          }
+          
+          errorMessage = errorData.title || errorData.message || errorMessage;
+          throw new Error(errorMessage);
+      }
 
-        setEditMode(prev => ({ ...prev, [field]: false }));
-        
-        // Show success notification
-        const fieldName = field === 'username' ? 'Nom d\'utilisateur' : 
-                         field === 'email' ? 'Email' : 'Mot de passe';
-        
-        showSuccess(`${fieldName} mis à jour avec succès!`);
+      setEditMode(prev => ({ ...prev, [field]: false }));
+      
+      // Show success notification
+      const fieldName = field === 'username' ? 'Nom d\'utilisateur' : 
+                       field === 'email' ? 'Email' : 'Mot de passe';
+      
+      showSuccess(`${fieldName} mis à jour avec succès!`);
 
-        // Clear password fields after successful update
-        if (field === 'password') {
-            setProfile(prev => ({
-                ...prev,
-                currentPassword: '',
-                newPassword: '',
-                confirmPassword: ''
-            }));
-        }
+      // Clear password fields after successful update
+      if (field === 'password') {
+          setProfile(prev => ({
+              ...prev,
+              currentPassword: '',
+              newPassword: '',
+              confirmPassword: ''
+          }));
+      }
 
-    } catch (error: any) {
-        console.error(`Failed to update ${field}:`, error);
-        showError(error.message || `Échec de la mise à jour de ${field}. Veuillez réessayer.`);
-    } finally {
-        setIsLoading(false);
-    }
-  };
+  } catch (error: any) {
+      showError(error.message || `Échec de la mise à jour de ${field}. Veuillez réessayer.`);
+  } finally {
+      setIsLoading(false);
+  }
+};
 
   const handleCancel = (field: keyof typeof editMode) => {
     setEditMode(prev => ({ ...prev, [field]: false }));

@@ -31,6 +31,8 @@ type FilterOptions = {
 };
 
 const CarsPage: React.FC = () => {
+const apiUrl = import.meta.env.VITE_API_URL;
+
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -84,7 +86,7 @@ const CarsPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch("https://palmares20250909131957.azurewebsites.net/api/car");
+      const res = await fetch(`${apiUrl}/api/car`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -105,7 +107,6 @@ const CarsPage: React.FC = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch cars';
       setError(errorMessage);
       showError(errorMessage);
-      console.error("Error fetching cars:", err);
     } finally {
       setIsLoading(false);
     }
@@ -156,7 +157,7 @@ const CarsPage: React.FC = () => {
     setFormErrors({});
 
     try {
-      const response = await fetch("https://palmares20250909131957.azurewebsites.net/api/car", {
+      const response = await fetch(`${apiUrl}/api/car`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -213,7 +214,6 @@ const CarsPage: React.FC = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add car';
       showError(errorMessage);
-      console.error("Error adding car:", err);
     } finally {
       setIsLoading(false);
     }
@@ -228,7 +228,7 @@ const CarsPage: React.FC = () => {
     setFormErrors({});
 
     try {
-      const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/car/${editedCar.id}`, {
+      const response = await fetch(`${apiUrl}/api/car/${editedCar.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -278,7 +278,6 @@ const CarsPage: React.FC = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update car';
       showError(errorMessage);
-      console.error("Error updating car:", err);
     } finally {
       setIsLoading(false);
     }
@@ -291,7 +290,7 @@ const CarsPage: React.FC = () => {
     setOperationError(null);
 
     try {
-      const response = await fetch(`https://palmares20250909131957.azurewebsites.net/api/car/${carToDelete}`, {
+      const response = await fetch(`${apiUrl}/api/car/${carToDelete}`, {
         method: "DELETE"
       });
 
@@ -306,7 +305,6 @@ const CarsPage: React.FC = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete car';
       showError(errorMessage);
-      console.error("Error deleting car:", err);
     } finally {
       setIsLoading(false);
       setCarToDelete(null);

@@ -37,8 +37,9 @@ type InsuranceForm = {
 
 type Company = { id: number; name: string; };
 type Car = { id: number; marque: string; modele: string; };
+const apiUrl = import.meta.env.VITE_API_URL;
 
-const API_BASE_URL = 'https://palmares20250909131957.azurewebsites.net/api/insurance';
+const API_BASE_URL = `${apiUrl}/api/insurance`;
 
 // Helper functions
 const calculateStatus = (dateExpiration: string): 'active' | 'expired' => {
@@ -69,10 +70,10 @@ const fetchInsurances = (): Promise<InsuranceVM[]> =>
   );
 
 const fetchCompanies = (): Promise<Company[]> => 
-  fetchData('https://palmares20250909131957.azurewebsites.net/api/compagnie', 'Failed to fetch companies');
+  fetchData(`${apiUrl}/api/compagnie`, 'Failed to fetch companies');
 
 const fetchCars = (): Promise<Car[]> => 
-  fetchData('https://palmares20250909131957.azurewebsites.net/api/car/CarsList', 'Failed to fetch cars');
+  fetchData(`${apiUrl}/api/car/CarsList`, 'Failed to fetch cars');
 
 const deleteInsurance = async (id: number): Promise<void> => {
   const response = await fetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' });
@@ -145,7 +146,6 @@ const InsurancesPage = () => {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
         setError(errorMessage);
         showError(errorMessage);
-        console.error('Error fetching data:', err);
       } finally {
         setIsLoading(false);
       }
@@ -299,7 +299,6 @@ const InsurancesPage = () => {
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add insurance';
       showError(errorMessage);
-      console.error("Error adding insurance:", err);
     } finally {
       setIsLoading(false);
     }
@@ -356,7 +355,6 @@ const InsurancesPage = () => {
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update insurance';
       showError(errorMessage);
-      console.error("Error updating insurance:", err);
     } finally {
       setIsLoading(false);
     }

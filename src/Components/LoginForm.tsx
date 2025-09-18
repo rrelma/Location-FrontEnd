@@ -18,6 +18,7 @@ const LoginPage = ({ onLogin, onForgotPassword, onSignUp, setIsAuthenticated }: 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const apiUrl = import.meta.env.VITE_API_URL;
 
   // Auto-focus sur le champ username au montage
   useEffect(() => {
@@ -58,7 +59,7 @@ const LoginPage = ({ onLogin, onForgotPassword, onSignUp, setIsAuthenticated }: 
     setIsSubmitting(true);
     try {
       // Call the login API endpoint
-      const response = await fetch('https://palmares20250909131957.azurewebsites.net/api/login', {
+      const response = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,10 +76,8 @@ const LoginPage = ({ onLogin, onForgotPassword, onSignUp, setIsAuthenticated }: 
         // Store username in sessionStorage (not user ID)
         sessionStorage.setItem('userid', userData.userId);
         sessionStorage.setItem('isAuthenticated', 'true');
-        console.log(userData.userId);
         
         // Update authentication state
-        console.log("Login successful");
         setIsAuthenticated(true);
         
         // Call the optional onLogin callback if provided
@@ -112,7 +111,6 @@ const LoginPage = ({ onLogin, onForgotPassword, onSignUp, setIsAuthenticated }: 
         }
       }
     } catch (error) {
-      console.error('Login error:', error);
       setErrors({
         general: 'Erreur de connexion au serveur. Veuillez réessayer.'
       });

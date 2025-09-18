@@ -41,8 +41,10 @@ const VignettesPage = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   const [formErrors, setFormErrors] = useState<Record<string, string[]>>({});
-  const API_BASE_URL = 'https://palmares20250909131957.azurewebsites.net/api/vignette';
-  const CARS_API_URL = 'https://palmares20250909131957.azurewebsites.net/api/car/CarsList';
+  const apiUrl = import.meta.env.VITE_API_URL;
+
+  const API_BASE_URL = `${apiUrl}/api/vignette`;
+  const CARS_API_URL = `${apiUrl}/api/car/CarsList`;
   const [vignettes, setVignettes] = useState<Vignette[]>([]);
   const [cars, setCars] = useState<CarSelect[]>([]);
 
@@ -74,7 +76,6 @@ const VignettesPage = () => {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch vignettes';
         setError(errorMessage);
         showError(errorMessage);
-        console.error("Error fetching vignettes:", err);
       } finally {
         setIsLoading(false);
       }
@@ -94,7 +95,6 @@ const VignettesPage = () => {
         const data = await response.json();
         setCars(data);
       } catch (err) {
-        console.error("Error fetching cars:", err);
       }
     };
 
@@ -193,7 +193,6 @@ const VignettesPage = () => {
       if (!errorMessage.includes("Form validation failed")) {
         showError(errorMessage);
       }
-      console.error("Error adding vignette:", err);
     } finally {
       setIsLoading(false);
     }
@@ -267,7 +266,6 @@ const VignettesPage = () => {
       if (!errorMessage.includes("Form validation failed")) {
         showError(errorMessage);
       }
-      console.error("Error updating vignette:", err);
     } finally {
       setIsLoading(false);
     }
@@ -294,7 +292,6 @@ const VignettesPage = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete vignette';
       showError(errorMessage);
-      console.error("Error deleting vignette:", err);
     } finally {
       setIsLoading(false);
       setVignetteToDelete(null);
