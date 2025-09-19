@@ -23,7 +23,6 @@ import {
   Bars3Icon,
 } from '@heroicons/react/24/outline';
 
-// Créer un contexte pour les notifications
 type NotificationType = {
   message: string;
   type: 'success' | 'error';
