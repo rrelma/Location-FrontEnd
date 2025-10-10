@@ -334,7 +334,7 @@ const ProfilePage = () => {
             transition={{ delay: 0.2 }}
             className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100"
           >
-            <div className="px极速-6 py-4 border-b border-slate-100 flex justify-between items-center">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
               <div className="flex items-center">
                 <button
                   onClick={() => navigate(-1)}

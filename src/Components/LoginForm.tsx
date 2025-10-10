@@ -75,6 +75,7 @@ const LoginPage = ({ onLogin, onForgotPassword, onSignUp, setIsAuthenticated }: 
         const userData = await response.json();
         // Store username in sessionStorage (not user ID)
         sessionStorage.setItem('userid', userData.userId);
+        console.log(userData.userId);
         sessionStorage.setItem('isAuthenticated', 'true');
         
         // Update authentication state
