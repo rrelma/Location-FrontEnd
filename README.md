@@ -6,6 +6,12 @@ A modern React-based dashboard for managing car rental operations. This applicat
 
 <img width="1920" height="919" alt="chrome-capture-2025-10-10 (1)" src="https://github.com/user-attachments/assets/db3a503c-99fe-40e8-9505-132590e7df94" />
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/342cb119-8e2b-452c-9e79-ae0211a86991" alt="WhatsApp Image 1" width="250" />
+  <img src="https://github.com/user-attachments/assets/2f636816-4bbe-46a9-a197-13a42d089aee" alt="WhatsApp Image 2" width="250" />
+  <img src="https://github.com/user-attachments/assets/b57b6b18-a09d-45ab-b373-35501f8edf7e" alt="WhatsApp Image 3" width="250" />
+</p>
+
 
 Dashboard Overview
 Get a quick overview of your rental operations with key metrics at a glance.
