@@ -61,7 +61,7 @@ Intuitive navigation menu
 
 🛠️ Technologies
 
-React.js - Modern UI library
+React.tsx - Modern UI library
 React Router - Navigation and routing
 Tailwind CSS - Utility-first styling
 Fetch API - HTTP requests to backend
