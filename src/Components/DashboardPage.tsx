@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../utils/auth';
 import {
   EyeIcon,
   PencilIcon,
@@ -128,7 +129,7 @@ const DashboardPage = () => {
 
   const fetchReservations = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/Dashboard/reservations`);
+      const response = await apiFetch(`${apiUrl}/api/Dashboard/reservations`);
       if (response.ok) {
         const data: Reservation[] = await response.json();
         setReservations(data);
@@ -142,7 +143,7 @@ const DashboardPage = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/Dashboard/stats`);
+      const response = await apiFetch(`${apiUrl}/api/Dashboard/stats`);
       if (response.ok) {
         const data: Stats = await response.json();
         setStats(data);
@@ -156,7 +157,7 @@ const DashboardPage = () => {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/client/ClientsList`);
+      const response = await apiFetch(`${apiUrl}/api/client/ClientsList`);
       if (response.ok) {
         const clientsData: { id: number; name: string }[] = await response.json();
         setClients(clientsData);
@@ -170,7 +171,7 @@ const DashboardPage = () => {
 
   const fetchCars = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/car/CarsList`);
+      const response = await apiFetch(`${apiUrl}/api/car/CarsList`);
       if (response.ok) {
         const carsData: { id: number; marque: string; modele: string }[] = await response.json();
         setCars(carsData);
@@ -249,7 +250,7 @@ const DashboardPage = () => {
           return;
         }
 
-        const response = await fetch(`${apiUrl}/api/Dashboard/reservations/${editedReservation.id}`, {
+        const response = await apiFetch(`${apiUrl}/api/Dashboard/reservations/${editedReservation.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -295,7 +296,7 @@ const DashboardPage = () => {
         return;
       }
 
-      const response = await fetch(`${apiUrl}/api/Dashboard/reservations`, {
+      const response = await apiFetch(`${apiUrl}/api/Dashboard/reservations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -332,7 +333,7 @@ const DashboardPage = () => {
   const handleDelete = async () => {
     if (reservationToDelete) {
       try {
-        const response = await fetch(`${apiUrl}/api/Dashboard/reservations/${reservationToDelete}`, {
+        const response = await apiFetch(`${apiUrl}/api/Dashboard/reservations/${reservationToDelete}`, {
           method: 'DELETE',
         });
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { setToken } from '../utils/auth';
 
 interface LoginFormProps {
   onLogin?: (username: string, password: string) => Promise<boolean> | boolean;
@@ -73,11 +74,10 @@ const LoginPage = ({ onLogin, onForgotPassword, onSignUp, setIsAuthenticated }: 
 
       if (response.ok) {
         const userData = await response.json();
-        // Store username in sessionStorage (not user ID)
+        // Store the JWT token for authenticated API calls
+        setToken(userData.token);
         sessionStorage.setItem('userid', userData.userId);
-        console.log(userData.userId);
-        sessionStorage.setItem('isAuthenticated', 'true');
-        
+
         // Update authentication state
         setIsAuthenticated(true);
         

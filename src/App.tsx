@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, NavLink } from 'react-router-dom';
 import { useState, createContext, useContext, useEffect } from 'react';
 import './App.css';
+import { isAuthenticated as hasToken, clearToken } from './utils/auth';
 import LoginForm from './Components/LoginForm';
 import DashboardPage from './Components/DashboardPage';
 import CarsPage from './Components/CarsPage';
@@ -43,20 +44,12 @@ export const useNotification = () => {
 };
 
 function App() {
-  // Check localStorage for existing authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    const savedAuth = localStorage.getItem('isAuthenticated');
-    return savedAuth === 'true';
-  });
+  // Authentication state is derived from the presence of a JWT token
+  const [isAuthenticated, setIsAuthenticated] = useState(() => hasToken());
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
-
-  // Save authentication state to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('isAuthenticated', isAuthenticated.toString());
-  }, [isAuthenticated]);
 
   const showNotification = (notification: NotificationType) => {
     setNotifications(prev => [...prev, notification]);
@@ -101,7 +94,8 @@ function App() {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    localStorage.removeItem('isAuthenticated');
+    clearToken();
+    sessionStorage.removeItem('userid');
   };
 
   // Composant ProtectedRoute

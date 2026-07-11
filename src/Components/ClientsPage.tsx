@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '../utils/auth';
 import {
   PencilIcon,
   TrashIcon,
@@ -86,7 +87,7 @@ const ClientsPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${apiUrl}/api/client`);
+      const response = await apiFetch(`${apiUrl}/api/client`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -161,7 +162,7 @@ const ClientsPage = () => {
     setFormErrors({});
     
     try {
-      const response = await fetch(`${apiUrl}/api/client/${editedClient.id}`, {
+      const response = await apiFetch(`${apiUrl}/api/client/${editedClient.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -219,7 +220,7 @@ const ClientsPage = () => {
     setFormErrors({});
     
     try {
-      const response = await fetch(`${apiUrl}/api/client`, {
+      const response = await apiFetch(`${apiUrl}/api/client`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -280,7 +281,7 @@ const ClientsPage = () => {
     setOperationError(null);
 
     try {
-      const response = await fetch(`${apiUrl}/api/client/${clientToDelete}`, {
+      const response = await apiFetch(`${apiUrl}/api/client/${clientToDelete}`, {
         method: 'DELETE'
       });
 

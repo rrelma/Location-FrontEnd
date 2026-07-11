@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '../utils/auth';
 import {
   EyeIcon,
   PencilIcon,
@@ -86,7 +87,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${apiUrl}/api/car`);
+      const res = await apiFetch(`${apiUrl}/api/car`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -157,7 +158,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
     setFormErrors({});
 
     try {
-      const response = await fetch(`${apiUrl}/api/car`, {
+      const response = await apiFetch(`${apiUrl}/api/car`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -228,7 +229,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
     setFormErrors({});
 
     try {
-      const response = await fetch(`${apiUrl}/api/car/${editedCar.id}`, {
+      const response = await apiFetch(`${apiUrl}/api/car/${editedCar.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -290,7 +291,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
     setOperationError(null);
 
     try {
-      const response = await fetch(`${apiUrl}/api/car/${carToDelete}`, {
+      const response = await apiFetch(`${apiUrl}/api/car/${carToDelete}`, {
         method: "DELETE"
       });
 

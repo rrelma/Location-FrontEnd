@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '../utils/auth';
 import {
   PencilIcon,
   TrashIcon,
@@ -59,7 +60,7 @@ const CompagniesPage = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch(API_BASE_URL);
+        const response = await apiFetch(API_BASE_URL);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -98,7 +99,7 @@ const CompagniesPage = () => {
     setFormErrors({});
     
     try {
-      const response = await fetch(API_BASE_URL, {
+      const response = await apiFetch(API_BASE_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +136,7 @@ const CompagniesPage = () => {
       }
 
       // Refresh the companies list
-      const updatedResponse = await fetch(API_BASE_URL);
+      const updatedResponse = await apiFetch(API_BASE_URL);
       if (updatedResponse.ok) {
         const updatedData = await updatedResponse.json();
         setCompanies(updatedData);
@@ -164,7 +165,7 @@ const CompagniesPage = () => {
   setFormErrors({});
   
   try {
-    const response = await fetch(`${API_BASE_URL}/${editedCompany.id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/${editedCompany.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -217,7 +218,7 @@ const CompagniesPage = () => {
     // For 204 No Content responses, we don't need to parse JSON
     if (response.status === 204) {
       // Refresh the companies list
-      const updatedResponse = await fetch(API_BASE_URL);
+      const updatedResponse = await apiFetch(API_BASE_URL);
       if (updatedResponse.ok) {
         const updatedData = await updatedResponse.json();
         setCompanies(updatedData);
@@ -241,7 +242,7 @@ const CompagniesPage = () => {
     setIsLoading(true);
     setOperationError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/${companyToDelete}`, {
+      const response = await apiFetch(`${API_BASE_URL}/${companyToDelete}`, {
         method: 'DELETE',
       });
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
+import { apiFetch } from '../utils/auth';
+import {
   PencilIcon,
   CheckIcon,
   XMarkIcon,
@@ -88,7 +89,7 @@ const ProfilePage = () => {
           throw new Error('No user ID found in session');
         }
 
-        const response = await fetch(`${apiUrl}/api/profile/${userid}`, {
+        const response = await apiFetch(`${apiUrl}/api/profile/${userid}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -165,7 +166,7 @@ const ProfilePage = () => {
             };
         }
 
-        const response = await fetch(`${apiUrl}/api/profile/${userId}`, {
+        const response = await apiFetch(`${apiUrl}/api/profile/${userId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',

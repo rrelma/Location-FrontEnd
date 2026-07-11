@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '../utils/auth';
 import {
   PencilIcon,
   TrashIcon,
@@ -66,7 +67,7 @@ const VignettesPage = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch(API_BASE_URL);
+        const response = await apiFetch(API_BASE_URL);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -88,7 +89,7 @@ const VignettesPage = () => {
   useEffect(() => {
     const fetchCars = async () => {
       try {
-        const response = await fetch(CARS_API_URL);
+        const response = await apiFetch(CARS_API_URL);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -125,7 +126,7 @@ const VignettesPage = () => {
       // Optimistically update UI
       setVignettes([...vignettes, tempVignette]);
 
-      const response = await fetch(API_BASE_URL, {
+      const response = await apiFetch(API_BASE_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,7 +215,7 @@ const VignettesPage = () => {
         vignette.id === editedVignette.id ? editedVignette : vignette
       ));
 
-      const response = await fetch(`${API_BASE_URL}/${editedVignette.id}`, {
+      const response = await apiFetch(`${API_BASE_URL}/${editedVignette.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -278,7 +279,7 @@ const VignettesPage = () => {
     setIsLoading(true);
     setOperationError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/${vignetteToDelete}`, {
+      const response = await apiFetch(`${API_BASE_URL}/${vignetteToDelete}`, {
         method: 'DELETE',
       });
 

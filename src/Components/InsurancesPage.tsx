@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '../utils/auth';
 import {
   PencilIcon,
   TrashIcon,
@@ -51,7 +52,7 @@ const calculateStatus = (dateExpiration: string): 'active' | 'expired' => {
 };
 
 const fetchData = async (url: string, errorMsg: string) => {
-  const response = await fetch(url);
+  const response = await apiFetch(url);
   if (!response.ok) {
     if (response.status === 404) return [];
     throw new Error(errorMsg);
@@ -76,7 +77,7 @@ const fetchCars = (): Promise<Car[]> =>
   fetchData(`${apiUrl}/api/car/CarsList`, 'Failed to fetch cars');
 
 const deleteInsurance = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' });
+  const response = await apiFetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' });
   if (!response.ok) throw new Error(response.status === 404 ? 'Insurance not found' : 'Failed to delete insurance');
 };
 
@@ -245,7 +246,7 @@ const InsurancesPage = () => {
     setFormErrors({});
     
     try {
-      const response = await fetch(API_BASE_URL, {
+      const response = await apiFetch(API_BASE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newInsurance),
@@ -312,7 +313,7 @@ const InsurancesPage = () => {
     setFormErrors({});
     
     try {
-      const response = await fetch(`${API_BASE_URL}/${editedInsurance.id}`, {
+      const response = await apiFetch(`${API_BASE_URL}/${editedInsurance.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editedInsurance),
